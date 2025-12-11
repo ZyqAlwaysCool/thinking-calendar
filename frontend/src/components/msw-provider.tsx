@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { setMockReady } from '@/mock/wait-mock'
 
 export const MswProvider = () => {
   useEffect(() => {
@@ -9,9 +10,11 @@ export const MswProvider = () => {
     if (!shouldMock) return
     const start = async () => {
       const { worker } = await import('@/mock/browser')
-      await worker.start({
+      const promise = worker.start({
         onUnhandledRequest: 'bypass'
       })
+      setMockReady(promise)
+      await promise
     }
     void start()
   }, [])

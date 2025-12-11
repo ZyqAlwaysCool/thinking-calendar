@@ -10,7 +10,7 @@ export const AccordionTrigger = ({ className, children, ...props }: AccordionPri
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       className={cn(
-        'flex flex-1 items-center justify-between py-4 text-left text-sm font-medium text-gray-800 transition-all duration-200 hover:scale-105 hover:text-gray-900 dark:text-gray-100 dark:hover:text-gray-50',
+        'flex flex-1 items-center justify-between py-4 text-left text-sm font-medium text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:text-gray-900 dark:text-gray-100 dark:hover:text-gray-50',
         className
       )}
       {...props}

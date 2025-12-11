@@ -15,7 +15,7 @@ export const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-10 w-full items-center justify-between rounded-lg border border-gray-200 bg-gray-100 px-3 text-sm text-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-50 dark:hover:border-gray-700',
+      'flex h-10 w-full items-center justify-between rounded-lg border border-gray-200 bg-gray-100 px-3 text-sm text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-50 dark:hover:border-gray-700',
       className
     )}
     {...props}
@@ -37,7 +37,7 @@ export const SelectContent = forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        'z-50 min-w-[8rem] overflow-hidden rounded-lg border border-gray-200 bg-gray-100 text-gray-800 shadow-md transition-all duration-200 hover:scale-105 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-50',
+        'z-50 min-w-[8rem] overflow-hidden rounded-lg border border-gray-200 bg-gray-100 text-gray-800 shadow-md transition-all duration-200 hover:scale-[1.02] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-50',
         position === 'popper' && 'translate-y-1',
         className
       )}
@@ -64,7 +64,7 @@ export const SelectItem = forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm text-gray-700 outline-none transition-all duration-200 hover:scale-105 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
+      'relative flex w-full cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm text-gray-700 outline-none transition-all duration-200 hover:scale-[1.02] hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
       className
     )}
     {...props}

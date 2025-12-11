@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { PAGE_TEXT } from '@/lib/constants'
 import { type ApiResponse, type Log, type SaveLogPayload } from '@/types'
+import { waitForMock } from '@/mock/wait-mock'
 
 type LogState = {
   logs: Log[]
@@ -22,6 +23,7 @@ export const useLogStore = create<LogState>((set, get) => ({
   fetchLogs: async () => {
     set({ loading: true })
     try {
+      await waitForMock()
       const res = await api.get<ApiResponse<Log[]>>('/logs')
       set({ logs: res.data.data, loading: false })
     } catch (error) {
@@ -33,6 +35,7 @@ export const useLogStore = create<LogState>((set, get) => ({
   fetchLogByDate: async (date: string) => {
     set({ loading: true })
     try {
+      await waitForMock()
       const res = await api.get<ApiResponse<Log | null>>('/logs', { params: { date } })
       const found = res.data.data
       const fallback: Log = {
@@ -52,6 +55,7 @@ export const useLogStore = create<LogState>((set, get) => ({
   saveLog: async (payload: SaveLogPayload) => {
     set({ saving: true })
     try {
+      await waitForMock()
       const res = await api.post<ApiResponse<Log>>('/logs', payload)
       const saved = res.data.data
       const existed = get().logs.some(item => item.date === saved.date)

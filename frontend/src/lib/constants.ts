@@ -1,9 +1,9 @@
 export const NAV_LABELS = {
   brand: 'Thinking-Calendar',
-  today: 'Today',
-  history: 'History',
-  dashboard: 'Dashboard',
-  reports: 'Reports',
+  today: '今天',
+  history: '历史',
+  dashboard: '看板',
+  reports: '报告',
   recent: '最近报告',
   viewAll: '查看全部 →'
 }
@@ -68,7 +68,9 @@ export const PAGE_TEXT = {
   todayGenerateAction: '生成本周报告 →',
   searchDate: '选择日期',
   missingFill: '点击补充',
-  yearlyHint: '基于已确认的周报或月报生成'
+  yearlyHint: '基于已确认的周报或月报生成',
+  userMenuGuest: '未登录',
+  userMenuLogout: '退出登录'
 }
 
 export const REPORT_OPTIONS = {

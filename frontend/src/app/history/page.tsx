@@ -96,7 +96,7 @@ const HistoryPage = () => {
                         void handleSelect(day)
                       }}
                       className={cn(
-                        'relative flex h-10 w-10 items-center justify-center rounded-lg text-sm text-gray-800 transition-all duration-200 hover:scale-105 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
+                        'relative flex h-10 w-10 items-center justify-center rounded-lg text-sm text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
                         dayProps.className
                       )}
                       type="button"

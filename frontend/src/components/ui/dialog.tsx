@@ -19,7 +19,7 @@ export const DialogContent = ({ className, children, ...props }: RadixDialog.Dia
     <DialogOverlay />
     <RadixDialog.Content
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-card transition-all duration-200 hover:scale-105 dark:border-gray-800 dark:bg-gray-900',
+        'fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-card transition-all duration-200 hover:scale-[1.02] dark:border-gray-800 dark:bg-gray-900',
         className
       )}
       {...props}

@@ -95,7 +95,7 @@ const DashboardPage = () => {
                     key={dateStr}
                     type="button"
                     onClick={() => openDialog(day)}
-                    className={`flex h-20 flex-col items-center justify-center rounded-lg border text-sm transition-all duration-200 hover:scale-105 ${
+                    className={`flex h-20 flex-col items-center justify-center rounded-lg border text-sm transition-all duration-200 hover:scale-[1.02] ${
                       isRecorded
                         ? 'border-gray-900 bg-gray-800 text-gray-50'
                         : 'border-gray-200 bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-red-100 dark:hover:text-red-700'

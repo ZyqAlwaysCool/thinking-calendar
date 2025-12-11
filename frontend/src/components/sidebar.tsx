@@ -30,7 +30,7 @@ const RecentList = () => {
           <Link
             href="/reports"
             key={item.id}
-            className="block rounded-xl border border-gray-200 bg-gray-100 p-3 text-sm transition-all duration-200 hover:scale-105 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+            className="block rounded-xl border border-gray-200 bg-gray-100 p-3 text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
           >
             <div className="flex items-center justify-between text-gray-800 dark:text-gray-100">
               <span className="font-semibold">{item.title}</span>
@@ -43,7 +43,7 @@ const RecentList = () => {
         ))}
         <Link
           href="/reports"
-          className="flex items-center justify-between rounded-xl px-2 py-1 text-xs text-gray-700 transition-all duration-200 hover:scale-105 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
+          className="flex items-center justify-between rounded-xl px-2 py-1 text-xs text-gray-700 transition-all duration-200 hover:scale-[1.02] hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
         >
           <span>{NAV_LABELS.viewAll}</span>
         </Link>
@@ -65,16 +65,16 @@ const DesktopSidebar = () => {
           const active = pathname === item.href
           const Icon = item.icon
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-800',
-                active
-                  ? 'bg-gray-900 text-gray-50 dark:bg-gray-100 dark:text-gray-900'
-                  : 'text-gray-700 dark:text-gray-200'
-              )}
-            >
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-gray-200 dark:hover:bg-gray-800',
+              active
+                ? 'bg-gray-900 text-gray-50 dark:bg-gray-100 dark:text-gray-900'
+                : 'text-gray-700 dark:text-gray-200'
+            )}
+          >
               <Icon className="h-5 w-5" />
               <span>{item.label}</span>
             </Link>
@@ -106,17 +106,17 @@ const MobileSidebar = () => {
                 const active = pathname === item.href
                 const Icon = item.icon
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-800',
-                      active
-                        ? 'bg-gray-900 text-gray-50 dark:bg-gray-100 dark:text-gray-900'
-                        : 'text-gray-700 dark:text-gray-200'
-                    )}
-                  >
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() => setOpen(false)}
+            className={cn(
+              'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-gray-200 dark:hover:bg-gray-800',
+              active
+                ? 'bg-gray-900 text-gray-50 dark:bg-gray-100 dark:text-gray-900'
+                : 'text-gray-700 dark:text-gray-200'
+            )}
+          >
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </Link>

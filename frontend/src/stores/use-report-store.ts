@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { PAGE_TEXT } from '@/lib/constants'
 import { type ApiResponse, type GenerateReportPayload, type Report } from '@/types'
+import { waitForMock } from '@/mock/wait-mock'
 
 type ReportState = {
   reports: Report[]
@@ -23,6 +24,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
   fetchReports: async () => {
     set({ loading: true })
     try {
+      await waitForMock()
       const res = await api.get<ApiResponse<Report[]>>('/reports')
       set({ reports: res.data.data, loading: false })
     } catch (error) {
@@ -33,6 +35,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
   },
   fetchRecent: async () => {
     try {
+      await waitForMock()
       const res = await api.get<ApiResponse<Report[]>>('/reports/recent')
       set({ recent: res.data.data })
     } catch (error) {
@@ -43,6 +46,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
   generateReport: async (payload: GenerateReportPayload) => {
     set({ generating: true })
     try {
+      await waitForMock()
       const res = await api.post<ApiResponse<Report>>('/reports/generate', payload)
       const created = res.data.data
       set({ reports: [created, ...get().reports], generating: false })
@@ -56,6 +60,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
   },
   confirmReport: async (id: string) => {
     try {
+      await waitForMock()
       const res = await api.post<ApiResponse<Report>>('/reports/confirm', { id })
       const confirmed = res.data.data
       set({

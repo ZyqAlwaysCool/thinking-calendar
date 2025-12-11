@@ -22,7 +22,7 @@ const LoginPage = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
-      <div className="w-full max-w-[400px] rounded-3xl border border-gray-200 bg-gray-100 p-12 shadow-card transition-all duration-200 hover:scale-105 hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+      <div className="w-full max-w-[400px] rounded-3xl border border-gray-200 bg-gray-100 p-12 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
         <div className="space-y-2 text-center">
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-50">{NAV_LABELS.brand}</div>
           <div className="text-gray-700 dark:text-gray-300">{PAGE_TEXT.loginSubtitle}</div>

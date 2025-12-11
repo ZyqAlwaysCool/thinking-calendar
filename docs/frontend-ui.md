@@ -89,7 +89,7 @@ mock/data.json 示例（请确保有 60 天数据）：
 内容：大标题 “Thinking-Calendar” (text-3xl font-bold gray-900)
 小标题 “专注工作记录，AI 帮你写周报” (text-gray-600)
 输入：用户名输入框 + 密码输入框
-按钮：单一“登录 / 注册”黑色按钮（全宽，白色文字，点击后若用户不存在视为注册，存在则登录）
+按钮：单一“登录 / 注册”黑色按钮（全宽，白色文字，点击后若用户不存在视为注册，存在则登录；hover 轻微缩放 1.02x）
 
 ### 2. 全局布局（layout.tsx）—— 原型图
 ```text
@@ -101,10 +101,12 @@ mock/data.json 示例（请确保有 60 天数据）：
 │                    │                                                           │
 │ Thinking Calendar  │                                                           │
 │                    │                                                           │
-│ Today              │                                                           │
-│ History            │                                                           │
-│ Dashboard          │                                                           │
-│ Reports            │                                                           │
+│ 今天               │                                                           │
+│ 历史               │                                                           │
+│ 看板               │                                                           │
+│ 报告               │                                                           │
+│                    │                                                           │
+│ 右上角：头像圆形按钮，点击展开用户菜单（显示用户名 + 退出登录）                 │
 │                    │                                                           │
 │ ────────────────── │                                                           │
 │ 最近报告           │                                                           │
@@ -128,7 +130,7 @@ mock/data.json 示例（请确保有 60 天数据）：
 │ │                         Tiptap 编辑器                                   │ │
 │ │ 高度：calc(100vh - 220px)                                               │ │
 │ │ 边框：border border-gray-200 rounded-xl                                 │ │
-│ │ 工具栏：Bold / Italic / Bullet List / Ordered List / H2 / H3            │ │
+│ │ 工具栏：Bold / Italic / Bullet List / Ordered List / H2 / H3 图标按钮   │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
 │ 底部固定栏（高 80px，bg-white dark:bg-gray-950，border-top）                │
