@@ -1,0 +1,100 @@
+export const NAV_LABELS = {
+  brand: 'Thinking-Calendar',
+  today: 'Today',
+  history: 'History',
+  dashboard: 'Dashboard',
+  reports: 'Reports',
+  recent: '最近报告',
+  viewAll: '查看全部 →'
+}
+
+export const PAGE_TEXT = {
+  loginTitle: 'Thinking-Calendar',
+  loginSubtitle: '专注工作记录，AI 帮你写周报',
+  loginButton: '使用 Google 登录',
+  loginSuccess: '登录成功',
+  loginFail: '登录失败，请稍后重试',
+  todayTitle: '今天',
+  historyTitle: '历史记录',
+  dashboardTitle: '记录看板',
+  reportsTitle: '报告中心',
+  editorPlaceholder: '记录今天的重点、产出、问题与下一步计划...',
+  emptyLog: '暂无记录，开始书写吧',
+  statisticsPrefix: '本月已记录',
+  statisticsGap: '未记录',
+  statisticsRate: '记录率',
+  reportTypeLabel: '报告类型',
+  templateLabel: '版式',
+  timeRangeLabel: '时间范围',
+  reportWeekLabel: '周报',
+  reportMonthLabel: '月报',
+  reportYearLabel: '年报',
+  selectReportHint: '选择一条报告查看详情',
+  confirmReport: '确认报告',
+  copyReport: '复制',
+  exportReport: '导出 PDF',
+  generateNow: '立即生成',
+  generateYearly: '生成年终总结',
+  weeklyReport: '周报',
+  monthlyReport: '月报',
+  yearlyReport: '年报',
+  confirmed: '已确认',
+  unconfirmed: '未确认',
+  noReport: '暂无报告',
+  noLog: '暂无日志',
+  loading: '加载中…',
+  loadFail: '加载失败',
+  save: '保存',
+  generating: '生成中…',
+  saveSuccess: '保存成功',
+  saveFail: '保存失败',
+  generateSuccess: '生成成功',
+  generateFail: '生成失败',
+  confirmSuccess: '确认成功',
+  confirmFail: '确认失败',
+  copySuccess: '已复制到剪贴板',
+  copyFail: '复制失败',
+  exportSuccess: '已打开打印窗口，可选择保存为 PDF',
+  exportFail: '导出失败',
+  viewInDialog: '在弹窗中编辑',
+  recordsCount: '条记录',
+  lastUpdated: '更新',
+  recordedTag: '已记录',
+  todayWeekPrefix: '第',
+  todayWeekSuffix: '周',
+  todayGenerateAction: '生成本周报告 →',
+  searchDate: '选择日期',
+  missingFill: '点击补充',
+  yearlyHint: '基于已确认的周报或月报生成'
+}
+
+export const REPORT_OPTIONS = {
+  period: [
+    { value: 'week', label: '周报' },
+    { value: 'month', label: '月报' },
+    { value: 'year', label: '年报' }
+  ],
+  template: [
+    { value: 'formal', label: '正式版' },
+    { value: 'simple', label: '简约版' }
+  ]
+}
+
+export const TOOLBAR_TEXT = {
+  bold: 'Bold',
+  italic: 'Italic',
+  bullet: 'Bullet',
+  ordered: 'Ordered',
+  h2: 'H2',
+  h3: 'H3'
+}
+
+export const DIALOG_TEXT = {
+  editLog: '编辑日志',
+  close: '关闭'
+}
+
+export const METADATA_TEXT = {
+  title: 'Thinking-Calendar',
+  description: '专注工作记录与报告生成的极简工具'
+}

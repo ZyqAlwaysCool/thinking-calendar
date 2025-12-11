@@ -1,0 +1,157 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { format, parseISO } from 'date-fns'
+import { type DayProps } from 'react-day-picker'
+import { PageShell } from '@/components/page-shell'
+import { Calendar } from '@/components/ui/calendar'
+import { Card } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Editor } from '@/components/editor'
+import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
+import { cn, formatDateLabel, formatShortDate, formatTime } from '@/lib/utils'
+import { useLogStore } from '@/stores/use-log-store'
+
+const HistoryPage = () => {
+  const { logs, fetchLogs, currentLog, fetchLogByDate, saveLog, loading, saving } = useLogStore()
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    void fetchLogs().catch(() => {})
+  }, [fetchLogs])
+
+  const recordedDates = useMemo(() => logs.map(item => parseISO(item.date)), [logs])
+  const logMap = useMemo(() => {
+    const map = new Map<string, typeof logs[number]>()
+    logs.forEach(item => map.set(item.date, item))
+    return map
+  }, [logs])
+
+  useEffect(() => {
+    if (open && currentLog) {
+      setDraft(currentLog.content)
+    }
+  }, [open, currentLog])
+
+  const handleSelect = async (date?: Date) => {
+    if (!date) return
+    setSelectedDate(date)
+    setOpen(true)
+    try {
+      await fetchLogByDate(format(date, 'yyyy-MM-dd'))
+    } catch {
+      // 已有提示
+    }
+  }
+
+  const handleSave = async () => {
+    if (!selectedDate) return
+    const dateStr = format(selectedDate, 'yyyy-MM-dd')
+    try {
+      await saveLog({ date: dateStr, content: draft })
+      await fetchLogs()
+      setOpen(false)
+    } catch {
+      // 已有提示
+    }
+  }
+
+  const sortedLogs = useMemo(
+    () => [...logs].sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [logs]
+  )
+
+  return (
+    <PageShell>
+      <div className="space-y-6">
+        <div className="text-3xl font-semibold text-gray-900 dark:text-gray-50">{NAV_LABELS.history}</div>
+        {loading ? (
+          <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
+            <Skeleton className="h-[400px] w-full" />
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleSelect}
+              components={{
+                Day: (dayProps: DayProps) => {
+                  const day = dayProps.date
+                  const hasLog = logMap.has(format(day, 'yyyy-MM-dd'))
+                  return (
+                    <button
+                      {...dayProps}
+                      onClick={(e) => {
+                        dayProps.onClick?.(e)
+                        void handleSelect(day)
+                      }}
+                      className={cn(
+                        'relative flex h-10 w-10 items-center justify-center rounded-lg text-sm text-gray-800 transition-all duration-200 hover:scale-105 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
+                        dayProps.className
+                      )}
+                      type="button"
+                    >
+                      {day.getDate()}
+                      {hasLog && <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-gray-800 dark:bg-gray-100" />}
+                    </button>
+                  )
+                }
+              }}
+              modifiers={{ recorded: recordedDates }}
+            />
+            <div className="space-y-3">
+              {sortedLogs.map(item => (
+                <Card key={item.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">{formatDateLabel(item.date)}</div>
+                    <div className="text-sm text-gray-300 dark:text-gray-300">{formatShortDate(item.date)}</div>
+                  </div>
+                  <div
+                    className="text-sm text-gray-700 dark:text-gray-200"
+                    dangerouslySetInnerHTML={{
+                      __html: item.content.includes('<') ? item.content : item.content.replace(/\n/g, '<br />')
+                    }}
+                  />
+                  <div className="text-xs text-gray-300 dark:text-gray-300">
+                    {`${item.count} ${PAGE_TEXT.recordsCount}`} · {formatTime(item.updatedAt)} {PAGE_TEXT.lastUpdated}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate ? `${PAGE_TEXT.viewInDialog} · ${formatDateLabel(format(selectedDate, 'yyyy-MM-dd'))}` : DIALOG_TEXT.editLog}
+            </DialogTitle>
+          </DialogHeader>
+          <Editor value={draft} onChange={setDraft} minHeight="400px" />
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              {DIALOG_TEXT.close}
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? PAGE_TEXT.loading : PAGE_TEXT.save}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
+  )
+}
+
+export default HistoryPage
