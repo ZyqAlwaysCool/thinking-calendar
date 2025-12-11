@@ -4,17 +4,19 @@ import { useRouter } from 'next/navigation'
 import { NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { useAuthStore } from '@/stores/use-auth-store'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useState } from 'react'
 
 const LoginPage = () => {
   const router = useRouter()
   const { login, loading } = useAuthStore()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
 
   const handleLogin = async () => {
-    try {
-      await login()
+    await login({ username, password })
+    if (username && password) {
       router.push('/today')
-    } catch {
-      // 已有 toast
     }
   }
 
@@ -25,15 +27,22 @@ const LoginPage = () => {
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-50">{NAV_LABELS.brand}</div>
           <div className="text-gray-700 dark:text-gray-300">{PAGE_TEXT.loginSubtitle}</div>
         </div>
-        <Button
-          variant="outline"
-          size="lg"
-          className="mt-10 w-full"
-          onClick={handleLogin}
-          disabled={loading}
-        >
-          {loading ? PAGE_TEXT.loading : PAGE_TEXT.loginButton}
-        </Button>
+        <div className="mt-8 space-y-4">
+          <Input
+            placeholder={PAGE_TEXT.usernamePlaceholder}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <Input
+            placeholder={PAGE_TEXT.passwordPlaceholder}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Button size="lg" className="w-full" onClick={handleLogin} disabled={loading}>
+            {loading ? PAGE_TEXT.loading : PAGE_TEXT.loginButton}
+          </Button>
+        </div>
       </div>
     </div>
   )

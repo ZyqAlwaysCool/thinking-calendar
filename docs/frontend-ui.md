@@ -88,7 +88,8 @@ mock/data.json 示例（请确保有 60 天数据）：
 卡片宽度 400px，圆角 24px，内边距 48px
 内容：大标题 “Thinking-Calendar” (text-3xl font-bold gray-900)
 小标题 “专注工作记录，AI 帮你写周报” (text-gray-600)
-Google 登录按钮（全宽，variant="outline"）
+输入：用户名输入框 + 密码输入框
+按钮：单一“登录 / 注册”黑色按钮（全宽，白色文字，点击后若用户不存在视为注册，存在则登录）
 
 ### 2. 全局布局（layout.tsx）—— 原型图
 ```text

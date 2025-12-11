@@ -6,20 +6,24 @@ import { type User } from '@/types'
 type AuthState = {
   user: User | null
   loading: boolean
-  login: () => Promise<void>
+  login: (payload: { username: string; password: string }) => Promise<void>
   logout: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: false,
-  login: async () => {
+  login: async ({ username, password }) => {
+    if (!username || !password) {
+      toast.error(PAGE_TEXT.loginRequired)
+      return
+    }
     set({ loading: true })
     try {
       const fakeUser: User = {
-        id: 'u1',
-        name: '演示账号',
-        email: 'demo@thinking-calendar.com'
+        id: username,
+        name: username,
+        email: `${username}@thinking-calendar.com`
       }
       await new Promise(resolve => setTimeout(resolve, 400))
       set({ user: fakeUser, loading: false })

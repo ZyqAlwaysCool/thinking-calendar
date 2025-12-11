@@ -11,9 +11,12 @@ export const NAV_LABELS = {
 export const PAGE_TEXT = {
   loginTitle: 'Thinking-Calendar',
   loginSubtitle: '专注工作记录，AI 帮你写周报',
-  loginButton: '使用 Google 登录',
+  loginButton: '登录 / 注册',
   loginSuccess: '登录成功',
   loginFail: '登录失败，请稍后重试',
+  loginRequired: '请填写用户名和密码',
+  usernamePlaceholder: '请输入用户名',
+  passwordPlaceholder: '请输入密码',
   todayTitle: '今天',
   historyTitle: '历史记录',
   dashboardTitle: '记录看板',
@@ -81,12 +84,12 @@ export const REPORT_OPTIONS = {
 }
 
 export const TOOLBAR_TEXT = {
-  bold: 'Bold',
-  italic: 'Italic',
-  bullet: 'Bullet',
-  ordered: 'Ordered',
-  h2: 'H2',
-  h3: 'H3'
+  bold: '加粗',
+  italic: '斜体',
+  bullet: '无序列表',
+  ordered: '有序列表',
+  h2: '二级标题',
+  h3: '三级标题'
 }
 
 export const DIALOG_TEXT = {

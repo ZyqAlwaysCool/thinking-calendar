@@ -99,7 +99,7 @@ const ReportsPage = () => {
   const handleExport = () => {
     try {
       const printWindow = window.open('', '_blank')
-      if (!printWindow) throw new Error('open window failed')
+      if (!printWindow) throw new Error(PAGE_TEXT.exportFail)
       printWindow.document.write(`<pre style="font-family: system-ui; white-space: pre-wrap;">${editorContent}</pre>`)
       printWindow.document.close()
       printWindow.print()
