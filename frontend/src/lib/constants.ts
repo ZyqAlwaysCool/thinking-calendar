@@ -95,7 +95,8 @@ export const TOOLBAR_TEXT = {
 }
 
 export const DIALOG_TEXT = {
-  editLog: '编辑日志',
+  editLog: '编辑',
+  edit: '编辑',
   close: '关闭'
 }
 

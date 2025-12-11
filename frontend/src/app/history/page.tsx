@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, isSameMonth } from 'date-fns'
 import { type DayProps } from 'react-day-picker'
 import { PageShell } from '@/components/page-shell'
 import { Calendar } from '@/components/ui/calendar'
@@ -17,6 +17,7 @@ import { useLogStore } from '@/stores/use-log-store'
 const HistoryPage = () => {
   const { logs, fetchLogs, currentLog, fetchLogByDate, saveLog, loading, saving } = useLogStore()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [displayMonth, setDisplayMonth] = useState<Date>(new Date())
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
 
@@ -40,6 +41,7 @@ const HistoryPage = () => {
   const handleSelect = async (date?: Date) => {
     if (!date) return
     setSelectedDate(date)
+    setDisplayMonth(date)
     setOpen(true)
     try {
       await fetchLogByDate(format(date, 'yyyy-MM-dd'))
@@ -60,10 +62,22 @@ const HistoryPage = () => {
     }
   }
 
-  const sortedLogs = useMemo(
-    () => [...logs].sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [logs]
+  const sortedLogs = useMemo(() => [...logs].sort((a, b) => (a.date < b.date ? 1 : -1)), [logs])
+  const monthLogs = useMemo(
+    () => sortedLogs.filter(item => isSameMonth(parseISO(item.date), displayMonth)),
+    [sortedLogs, displayMonth]
   )
+
+  const openEditor = async (date: string) => {
+    const parsed = parseISO(date)
+    setSelectedDate(parsed)
+    setOpen(true)
+    try {
+      await fetchLogByDate(format(parsed, 'yyyy-MM-dd'))
+    } catch {
+      // 已有提示
+    }
+  }
 
   return (
     <PageShell>
@@ -83,6 +97,8 @@ const HistoryPage = () => {
             <Calendar
               mode="single"
               selected={selectedDate}
+              month={displayMonth}
+              onMonthChange={(m) => setDisplayMonth(m ?? new Date())}
               onSelect={handleSelect}
               components={{
                 Day: (dayProps: DayProps) => {
@@ -110,7 +126,7 @@ const HistoryPage = () => {
               modifiers={{ recorded: recordedDates }}
             />
             <div className="space-y-3">
-              {sortedLogs.map(item => (
+              {monthLogs.map(item => (
                 <Card key={item.id} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">{formatDateLabel(item.date)}</div>
@@ -122,8 +138,13 @@ const HistoryPage = () => {
                       __html: item.content.includes('<') ? item.content : item.content.replace(/\n/g, '<br />')
                     }}
                   />
-                  <div className="text-xs text-gray-300 dark:text-gray-300">
-                    {`${item.count} ${PAGE_TEXT.recordsCount}`} · {formatTime(item.updatedAt)} {PAGE_TEXT.lastUpdated}
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-300 dark:text-gray-300">
+                      {`${formatTime(item.updatedAt)} ${PAGE_TEXT.lastUpdated}`}
+                    </div>
+                    <Button size="sm" onClick={() => openEditor(item.date)}>
+                      {DIALOG_TEXT.edit}
+                    </Button>
                   </div>
                 </Card>
               ))}

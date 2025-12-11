@@ -1,4 +1,5 @@
 import { DayPicker } from 'react-day-picker'
+import { zhCN } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
 type CalendarProps = React.ComponentProps<typeof DayPicker>
@@ -6,6 +7,7 @@ type CalendarProps = React.ComponentProps<typeof DayPicker>
 export const Calendar = ({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) => (
   <DayPicker
     showOutsideDays={showOutsideDays}
+    locale={props.locale ?? zhCN}
     className={cn('rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-gray-800 dark:bg-gray-900', className)}
     classNames={{
       months: 'flex flex-col space-y-4',
