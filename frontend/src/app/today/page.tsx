@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { format } from 'date-fns'
+import { useEffect, useMemo, useState } from 'react'
+import { format, formatDistanceToNow, parseISO } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
 import { PageShell } from '@/components/page-shell'
 import { Editor } from '@/components/editor'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,11 @@ const TodayPage = () => {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [content, setContent] = useState('')
   const { currentLog, loading, saving, fetchLogByDate, saveLog } = useLogStore()
+  const lastUpdatedHint = useMemo(() => {
+    if (!currentLog) return ''
+    const updated = parseISO(currentLog.updatedAt)
+    return formatDistanceToNow(updated, { locale: zhCN, addSuffix: true })
+  }, [currentLog])
 
   useEffect(() => {
     void fetchLogByDate(today).catch(() => {})
@@ -40,6 +46,9 @@ const TodayPage = () => {
       <div className="space-y-6">
         <div className="space-y-1">
           <div className="text-3xl font-semibold text-gray-900 dark:text-gray-50">{todayLabel}</div>
+          {currentLog?.updatedAt && (
+            <div className="text-sm text-gray-400 dark:text-gray-500">{`${PAGE_TEXT.lastUpdatedRecent}：${lastUpdatedHint}`}</div>
+          )}
         </div>
         {loading ? (
           <div className="space-y-4">

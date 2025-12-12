@@ -372,6 +372,9 @@ const ReportsPage = () => {
                   {(generating || typing) && (
                     <div className="text-sm text-gray-400 dark:text-gray-500">AI 正在生成，稍候即会出现内容</div>
                   )}
+                  <Button variant="outline" size="lg" className="flex items-center gap-2">
+                    {PAGE_TEXT.exportBatch}
+                  </Button>
                 </div>
               </Card>
 

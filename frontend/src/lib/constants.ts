@@ -41,6 +41,7 @@ export const PAGE_TEXT = {
   confirmReport: '确认报告',
   copyReport: '复制',
   exportReport: '导出 PDF',
+  exportBatch: '批量导出 PDF',
   generateNow: '立即生成',
   generateYearly: '生成年终总结',
   weeklyReport: '周报',

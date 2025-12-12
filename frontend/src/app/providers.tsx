@@ -23,7 +23,7 @@ export const Providers = ({ children }: Props) => {
     <>
       <MswProvider />
       {children}
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
     </>
   )
 }
