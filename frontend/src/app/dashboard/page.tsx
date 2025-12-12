@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from 'date-fns'
+import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, isAfter } from 'date-fns'
 import { PageShell } from '@/components/page-shell'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { formatDateLabel } from '@/lib/utils'
 import { useLogStore } from '@/stores/use-log-store'
+import { toast } from 'react-hot-toast'
 
 const DashboardPage = () => {
   const { logs, fetchLogs, fetchLogByDate, currentLog, saveLog, loading, saving } = useLogStore()
@@ -49,6 +50,10 @@ const DashboardPage = () => {
   const rate = currentMonthDays.length === 0 ? 0 : Math.round((recordedCount / currentMonthDays.length) * 100)
 
   const openDialog = async (day: Date) => {
+    if (isAfter(day, new Date())) {
+      toast.error(PAGE_TEXT.futureDateForbidden)
+      return
+    }
     setSelectedDate(day)
     setOpen(true)
     try {
@@ -83,7 +88,7 @@ const DashboardPage = () => {
         {loading ? (
           <Skeleton className="h-[500px] w-full" />
         ) : (
-          <Card className="min-h-[500px]">
+          <Card className="min-h-[500px] hover:scale-100">
             <div className="grid grid-cols-7 gap-2">
               {monthDays.map(day => {
                 const dateStr = format(day, 'yyyy-MM-dd')
@@ -95,7 +100,7 @@ const DashboardPage = () => {
                     key={dateStr}
                     type="button"
                     onClick={() => openDialog(day)}
-                    className={`flex h-20 flex-col items-center justify-center rounded-lg border text-sm transition-all duration-200 hover:scale-[1.02] ${
+                    className={`flex h-20 flex-col items-center justify-center rounded-lg border text-sm transition-all duration-200 hover:shadow-md ${
                       isRecorded
                         ? 'border-gray-900 bg-gray-800 text-gray-50'
                         : 'border-gray-200 bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-red-100 dark:hover:text-red-700'

@@ -427,7 +427,7 @@
       "period": "week",
       "startDate": "2025-12-02",
       "endDate": "2025-12-08",
-      "title": "第49周周报",
+      "title": "2025年12月02日-12月08日 周报",
       "content": "# 周报\n- 关键需求完成率 90%\n- 主要风险已收敛\n- 下周重点：发布与回归",
       "confirmed": true,
       "createdAt": "2025-12-08T22:00:00Z"
@@ -437,7 +437,7 @@
       "period": "week",
       "startDate": "2025-12-09",
       "endDate": "2025-12-15",
-      "title": "第50周周报",
+      "title": "2025年12月09日-12月15日 周报",
       "content": "# 周报\n- 完成核心模块联调\n- 修复高优缺陷 6 个\n- 下周目标：回归与上线",
       "confirmed": false,
       "createdAt": "2025-12-11T10:00:00Z"
@@ -457,7 +457,7 @@
       "period": "week",
       "startDate": "2025-11-25",
       "endDate": "2025-12-01",
-      "title": "第48周周报",
+      "title": "2025年11月25日-12月01日 周报",
       "content": "# 周报\n- 新增需求评审完成\n- 上线监控稳定\n- 下周计划：性能压测",
       "confirmed": true,
       "createdAt": "2025-12-01T20:00:00Z"
@@ -477,7 +477,7 @@
       "period": "week",
       "startDate": "2025-12-16",
       "endDate": "2025-12-22",
-      "title": "第51周周报",
+      "title": "2025年12月16日-12月22日 周报",
       "content": "# 周报\n- 预研年度总结模板\n- 修正月报数据源\n- 下周目标：总结发布",
       "confirmed": false,
       "createdAt": "2025-12-18T18:00:00Z"

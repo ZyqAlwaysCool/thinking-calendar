@@ -28,3 +28,6 @@ export const formatRangeLabel = (start: string, end: string): string => {
 
 export const formatTime = (dateString: string): string =>
   format(parseISO(dateString), 'HH:mm', { locale: zhCN })
+
+export const formatDateTime = (dateString: string): string =>
+  format(parseISO(dateString), 'yyyy-MM-dd HH:mm', { locale: zhCN })

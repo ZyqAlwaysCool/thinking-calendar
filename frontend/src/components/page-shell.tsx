@@ -1,11 +1,12 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from './sidebar'
 import { useAuthStore } from '@/stores/use-auth-store'
 import { PAGE_TEXT } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { toast } from 'react-hot-toast'
 
 type Props = {
   children: ReactNode
@@ -52,13 +53,33 @@ const UserMenu = () => {
 }
 
 export const PageShell = ({ children }: Props) => (
-  <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <Sidebar />
-    <main className="mx-auto max-w-[1400px] p-6 lg:ml-[280px] lg:p-8">
-      <div className="mb-6 flex justify-end">
-        <UserMenu />
-      </div>
-      {children}
-    </main>
-  </div>
+  <ProtectedShell>{children}</ProtectedShell>
 )
+
+const ProtectedShell = ({ children }: Props) => {
+  const router = useRouter()
+  const { user } = useAuthStore()
+
+  useEffect(() => {
+    if (!user) {
+      toast.error(PAGE_TEXT.loginAuthRequired)
+      router.replace('/')
+    }
+  }, [user, router])
+
+  if (!user) {
+    return null
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Sidebar />
+      <main className="mx-auto max-w-[1400px] p-6 lg:ml-[280px] lg:p-8">
+        <div className="mb-6 flex justify-end">
+          <UserMenu />
+        </div>
+        {children}
+      </main>
+    </div>
+  )
+}

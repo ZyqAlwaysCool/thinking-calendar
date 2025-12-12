@@ -36,6 +36,7 @@ export type GenerateReportPayload = {
   startDate: string
   endDate: string
   template: 'formal' | 'simple'
+  replaceId?: string
 }
 
 export type SaveLogPayload = {

@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { CalendarDays, FileText, History, LayoutDashboard, Menu } from 'lucide-react'
 import { NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
-import { cn, formatRangeLabel } from '@/lib/utils'
-import { useReportStore } from '@/stores/use-report-store'
+import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog'
 
@@ -16,41 +15,6 @@ const navItems = [
   { href: '/dashboard', label: NAV_LABELS.dashboard, icon: LayoutDashboard },
   { href: '/reports', label: NAV_LABELS.reports, icon: FileText }
 ]
-
-const RecentList = () => {
-  const { recent, fetchRecent } = useReportStore()
-  useEffect(() => {
-    void fetchRecent().catch(() => {})
-  }, [fetchRecent])
-  return (
-    <div className="space-y-3">
-      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{NAV_LABELS.recent}</div>
-      <div className="space-y-2">
-        {recent.slice(0, 5).map(item => (
-          <Link
-            href="/reports"
-            key={item.id}
-            className="block rounded-xl border border-gray-200 bg-gray-100 p-3 text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
-          >
-            <div className="flex items-center justify-between text-gray-800 dark:text-gray-100">
-              <span className="font-semibold">{item.title}</span>
-              <span className="text-xs text-gray-300 dark:text-gray-300">{item.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.unconfirmed}</span>
-            </div>
-            <div className="text-xs text-gray-300 dark:text-gray-300">
-              {formatRangeLabel(item.startDate, item.endDate)}
-            </div>
-          </Link>
-        ))}
-        <Link
-          href="/reports"
-          className="flex items-center justify-between rounded-xl px-2 py-1 text-xs text-gray-700 transition-all duration-200 hover:scale-[1.02] hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
-        >
-          <span>{NAV_LABELS.viewAll}</span>
-        </Link>
-      </div>
-    </div>
-  )
-}
 
 const DesktopSidebar = () => {
   const pathname = usePathname()
@@ -81,7 +45,6 @@ const DesktopSidebar = () => {
           )
         })}
       </nav>
-      <RecentList />
     </aside>
   )
 }
@@ -123,7 +86,6 @@ const MobileSidebar = () => {
                 )
               })}
             </nav>
-            <RecentList />
           </div>
         </DialogContent>
       </Dialog>

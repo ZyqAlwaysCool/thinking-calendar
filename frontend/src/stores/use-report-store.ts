@@ -12,8 +12,9 @@ type ReportState = {
   generating: boolean
   fetchReports: () => Promise<void>
   fetchRecent: () => Promise<void>
-  generateReport: (payload: GenerateReportPayload) => Promise<Report>
+  generateReport: (payload: GenerateReportPayload, options?: { replaceId?: string }) => Promise<Report>
   confirmReport: (id: string) => Promise<void>
+  markUnconfirmed: (id: string) => void
 }
 
 export const useReportStore = create<ReportState>((set, get) => ({
@@ -43,12 +44,25 @@ export const useReportStore = create<ReportState>((set, get) => ({
       throw error
     }
   },
-  generateReport: async (payload: GenerateReportPayload) => {
+  generateReport: async (payload: GenerateReportPayload, options?: { replaceId?: string }) => {
     set({ generating: true })
     try {
+      const requestPayload = options?.replaceId ? { ...payload, replaceId: options.replaceId } : payload
       await waitForMock()
-      const res = await api.post<ApiResponse<Report>>('/reports/generate', payload)
+      const res = await api.post<ApiResponse<Report>>('/reports/generate', requestPayload)
       const created = res.data.data
+      if (options?.replaceId) {
+        const updated = { ...created, id: options.replaceId, confirmed: false }
+        set({
+          reports: get().reports.map(item =>
+            item.id === options.replaceId ? updated : item.period === created.period && item.startDate === created.startDate && item.endDate === created.endDate ? updated : item
+          ),
+          recent: get().recent.map(item => (item.id === options.replaceId ? updated : item)),
+          generating: false
+        })
+        toast.success(PAGE_TEXT.generateSuccess)
+        return updated
+      }
       set({ reports: [created, ...get().reports], generating: false })
       toast.success(PAGE_TEXT.generateSuccess)
       return created
@@ -72,5 +86,11 @@ export const useReportStore = create<ReportState>((set, get) => ({
       toast.error(PAGE_TEXT.confirmFail)
       throw error
     }
+  },
+  markUnconfirmed: (id: string) => {
+    set({
+      reports: get().reports.map(item => (item.id === id ? { ...item, confirmed: false } : item)),
+      recent: get().recent.map(item => (item.id === id ? { ...item, confirmed: false } : item))
+    })
   }
 }))

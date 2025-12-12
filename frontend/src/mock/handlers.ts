@@ -1,4 +1,5 @@
 import { rest } from 'msw'
+import { format, getISOWeek, parseISO } from 'date-fns'
 import raw from './data.json'
 import { type ApiResponse, type Log, type Report } from '@/types'
 
@@ -50,17 +51,22 @@ export const handlers = [
   }),
   rest.post('/api/reports/generate', async (req, res, ctx) => {
     const body = await req.json()
-    const { period, startDate, endDate, template } = body as {
+    const { period, startDate, endDate, template, replaceId } = body as {
       period: Report['period']
       startDate: string
       endDate: string
       template: 'formal' | 'simple'
+      replaceId?: string
     }
     const now = new Date()
-    const id = `r${now.getTime()}`
+    const existing = replaceId ? reports.find(item => item.id === replaceId) : undefined
+    const finalId = replaceId ?? `r${now.getTime()}`
+    const computedWeek = getISOWeek(parseISO(startDate))
+    const startLabel = format(parseISO(startDate), 'yyyy年MM月dd日')
+    const endLabel = format(parseISO(endDate), 'MM月dd日')
     const title =
       period === 'week'
-        ? `第${reports.length + 48}周周报`
+        ? `${startLabel}-${endLabel} 周报`
         : period === 'month'
           ? `${startDate.slice(0, 7).replace('-', '年')}月报`
           : `${startDate.slice(0, 4)}年度总结`
@@ -70,17 +76,22 @@ export const handlers = [
       '- 风险与阻碍：已给出应对方案',
       '- 下阶段计划：按优先级推进'
     ].join('\\n')
+    const createdAt = replaceId ? now.toISOString() : existing?.createdAt ?? now.toISOString()
     const created: Report = {
-      id,
+      id: finalId,
       period,
       startDate,
       endDate,
       title,
       content,
-      confirmed: false,
-      createdAt: now.toISOString()
+      confirmed: replaceId ? false : existing?.confirmed ?? false,
+      createdAt
     }
-    reports = [created, ...reports]
+    if (existing) {
+      reports = reports.map(item => (item.id === finalId ? created : item))
+    } else {
+      reports = [created, ...reports]
+    }
     const response: ApiResponse<Report> = { code: 0, msg: 'success', data: created }
     return res(ctx.status(200), ctx.json(response))
   }),

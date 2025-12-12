@@ -5,24 +5,61 @@ import { NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { useAuthStore } from '@/stores/use-auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useState } from 'react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
 
 const LoginPage = () => {
   const router = useRouter()
   const { login, loading } = useAuthStore()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogin = async () => {
-    await login({ username, password })
-    if (username && password) {
-      router.push('/today')
+    const trimmedUsername = username.trim()
+    const trimmedPassword = password.trim()
+    if (!trimmedUsername || !trimmedPassword) {
+      toast.error(PAGE_TEXT.loginRequired)
+      return
     }
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
+      toast.error(PAGE_TEXT.loginUsernameLength)
+      return
+    }
+    if (trimmedPassword.length < 6 || trimmedPassword.length > 32) {
+      toast.error(PAGE_TEXT.loginPasswordLength)
+      return
+    }
+    await login({ username: trimmedUsername, password: trimmedPassword })
+    router.push('/today')
+  }
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-[400px] rounded-3xl border border-gray-200 bg-gray-100 p-12 shadow-card dark:border-gray-800 dark:bg-gray-900 transition-all duration-200 hover:scale-[1.02] hover:shadow-md">
+          <div className="space-y-2 text-center">
+            <Skeleton className="mx-auto h-8 w-32" />
+            <Skeleton className="mx-auto h-4 w-48" />
+          </div>
+          <div className="mt-8 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
-      <div className="w-full max-w-[400px] rounded-3xl border border-gray-200 bg-gray-100 p-12 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center px-4 bg-gray-50 dark:bg-gray-900">
+      <div className="w-full max-w-[400px] rounded-3xl border border-gray-200 bg-gray-100 p-12 shadow-card dark:border-gray-800 dark:bg-gray-900 transition-all duration-200 hover:scale-[1.02] hover:shadow-md">
         <div className="space-y-2 text-center">
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-50">{NAV_LABELS.brand}</div>
           <div className="text-gray-700 dark:text-gray-300">{PAGE_TEXT.loginSubtitle}</div>

@@ -1,3 +1,10 @@
+<!--
+ * @Description: 
+ * @Author: zyq
+ * @Date: 2025-12-11 11:45:33
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-12 09:08:50
+-->
 ### General Rules
 - 永远、永远、永远用中文输出。禁止出现英文解释、英文注释、英文日志（代码中的变量名、类型名、API 路径除外）；
 - 禁止道歉、禁止说“可能”“猜测”“大概”，必须先阅读代码或运行测试后再下结论；
@@ -37,3 +44,7 @@
 - 日志使用 zap 或 zerolog，禁止 fmt.Println；
 - 代码末尾可以有分号，但建议省略（go fmt 会自动处理）；
 - 每次修改必须说明「影响的路由 + 数据库变更 + 是否需要迁移」。
+
+### about project
+- docs/project.md: 项目说明
+- docs/frontend-ui.md: 前端工程设计说明

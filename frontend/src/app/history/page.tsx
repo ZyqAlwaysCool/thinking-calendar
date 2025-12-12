@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { format, parseISO, isSameMonth } from 'date-fns'
+import { format, parseISO, isSameMonth, isAfter } from 'date-fns'
 import { type DayProps } from 'react-day-picker'
 import { PageShell } from '@/components/page-shell'
 import { Calendar } from '@/components/ui/calendar'
@@ -13,6 +13,7 @@ import { Editor } from '@/components/editor'
 import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { cn, formatDateLabel, formatShortDate, formatTime } from '@/lib/utils'
 import { useLogStore } from '@/stores/use-log-store'
+import { toast } from 'react-hot-toast'
 
 const HistoryPage = () => {
   const { logs, fetchLogs, currentLog, fetchLogByDate, saveLog, loading, saving } = useLogStore()
@@ -40,6 +41,11 @@ const HistoryPage = () => {
 
   const handleSelect = async (date?: Date) => {
     if (!date) return
+    const today = new Date()
+    if (isAfter(date, today)) {
+      toast.error(PAGE_TEXT.futureDateForbidden)
+      return
+    }
     setSelectedDate(date)
     setDisplayMonth(date)
     setOpen(true)
@@ -70,6 +76,10 @@ const HistoryPage = () => {
 
   const openEditor = async (date: string) => {
     const parsed = parseISO(date)
+    if (isAfter(parsed, new Date())) {
+      toast.error(PAGE_TEXT.futureDateForbidden)
+      return
+    }
     setSelectedDate(parsed)
     setOpen(true)
     try {
