@@ -74,11 +74,13 @@ const ProtectedShell = ({ children }: Props) => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <main className="mx-auto w-full max-w-[clamp(1200px,80vw,1680px)] p-6 lg:ml-[280px] lg:p-8">
-        <div className="mb-6 flex justify-end">
-          <UserMenu />
+      <main className="w-full lg:pl-[280px]">
+        <div className="mx-auto w-full max-w-none p-6 lg:p-8">
+          <div className="mb-6 flex justify-end">
+            <UserMenu />
+          </div>
+          {children}
         </div>
-        {children}
       </main>
     </div>
   )

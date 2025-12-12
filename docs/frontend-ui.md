@@ -40,7 +40,7 @@ src/
 │   ├── ui/                    # shadcn 组件
 │   ├── Editor.tsx
 │   ├── ReportViewer.tsx
-│   └── Sidebar.tsx            # 左侧导航（含最近报告）
+│   └── Sidebar.tsx            # 左侧导航
 ├── lib/
 │   ├── api.ts
 │   └── utils.ts
@@ -64,8 +64,8 @@ src/
 - 圆角：卡片 16px，按钮 12px
 - 所有 hover：shadow-md + scale-105 + transition-all duration-200
 - 字体：system-ui，text-base (16px)
-- 左侧导航栏：固定宽度 280px
-- 右侧内容区：margin-left 280px，padding 32px，max-width 1400px，居中
+- 左侧导航栏：固定宽度 280px（桌面）
+- 右侧内容区：lg 时 margin-left 280px，w-full 占满剩余，内边距 24px（lg 32px），无 max-width 限制
 
 ## API 和 Mock
 
@@ -74,8 +74,8 @@ mock/data.json 示例（请确保有 60 天数据）：
 {
   "logs": [ /* 60 条工作记录 */ ],
   "reports": [
-    {"id":"1","period":"week","startDate":"2025-12-02","endDate":"2025-12-08","title":"第49周周报","content":"# 周报\n...","confirmed":true,"createdAt":"2025-12-08T22:00:00Z"},
-    {"id":"2","period":"week","startDate":"2025-12-09","endDate":"2025-12-15","title":"第50周周报","content":"# 周报\n...","confirmed":false,"createdAt":"2025-12-11T10:00:00Z"},
+    {"id":"1","period":"week","startDate":"2025-12-02","endDate":"2025-12-08","title":"2025年12月02日-12月08日 周报","content":"# 周报\n...","confirmed":true,"createdAt":"2025-12-08T22:00:00Z"},
+    {"id":"2","period":"week","startDate":"2025-12-09","endDate":"2025-12-15","title":"2025年12月09日-12月15日 周报","content":"# 周报\n...","confirmed":false,"createdAt":"2025-12-11T10:00:00Z"},
     {"id":"3","period":"month","startDate":"2025-11-01","endDate":"2025-11-30","title":"2025年11月月报","content":"# 月报\n...","confirmed":true,"createdAt":"2025-11-30T22:00:00Z"}
   ]
 }
@@ -97,7 +97,7 @@ mock/data.json 示例（请确保有 60 天数据）：
 桌面端（≥1024px）：
 ┌────────────────────┬────────────────────────────────────────────────────────────┐
 │ 左侧固定导航栏     │                        右侧内容区                          │
-│ 宽度：280px        │ ml-280 p-8 max-w-1400px mx-auto                            │
+│ 宽度：280px        │ ml-280 p-6/8 w-full                                        │
 │ bg-gray-100        │ bg-white dark:bg-gray-950                                 │
 │                    │                                                           │
 │ Thinking Calendar  │                                                           │
@@ -108,13 +108,6 @@ mock/data.json 示例（请确保有 60 天数据）：
 │ 报告               │                                                           │
 │                    │                                                           │
 │ 右上角：头像圆形按钮，点击展开用户菜单（显示用户名 + 退出登录）                 │
-│                    │                                                           │
-│ ────────────────── │                                                           │
-│ 最近报告           │                                                           │
-│ 第50周周报 Dec 9-15│                                                           │
-│ 2025年11月月报 Nov │                                                           │
-│ 第49周周报 Dec 2-8 │                                                           │
-│ …… 查看全部 →     │                                                           │
 └────────────────────┴────────────────────────────────────────────────────────────┘
 
 移动端：左侧栏隐藏，顶部出现汉堡菜单，点击弹出 Drawer
@@ -216,12 +209,11 @@ mock/data.json 示例（请确保有 60 天数据）：
 ## 精确尺寸与强制要求
 
 - 左侧导航栏：width: 280px（固定）
-- 右侧内容区：margin-left: 280px，宽度 clamp(1200px, 80vw, 1680px)
+- 右侧内容区：margin-left: 280px（lg 及以上），占满剩余宽度（max-w none），内边距 24px（lg 32px）
 - 编辑器最小高度：calc(100vh - 220px)
 - Dialog 编辑器：90vw，max-width 1000px
 - 卡片圆角：16px
 - 按钮圆角：12px
 - 所有间距：使用 4 的倍数（p-4, p-8, gap-6）
-- 最近报告列表：显示 5 条，超过显示 “查看全部 →”
 - 禁止出现任何蓝色、绿色、紫色、红色（除未记录 hover 外）
 - 禁止热力图、图表、激励横幅、生活标签、单日报告按钮
