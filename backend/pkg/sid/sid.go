@@ -11,6 +11,13 @@ type Sid struct {
 func NewSid() *Sid {
 	sf := sonyflake.NewSonyflake(sonyflake.Settings{})
 	if sf == nil {
+		sf = sonyflake.NewSonyflake(sonyflake.Settings{
+			MachineID: func() (uint16, error) {
+				return 1, nil
+			},
+		})
+	}
+	if sf == nil {
 		panic("sonyflake not created")
 	}
 	return &Sid{sf}

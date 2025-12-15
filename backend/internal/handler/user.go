@@ -1,11 +1,13 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
-	"backend/api/v1"
+	v1 "backend/api/v1"
 	"backend/internal/service"
-	"go.uber.org/zap"
+	"errors"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -23,15 +25,15 @@ func NewUserHandler(handler *Handler, userService service.UserService) *UserHand
 // Register godoc
 // @Summary 用户注册
 // @Schemes
-// @Description 目前只支持邮箱登录
+// @Description 目前只支持用户名登录
 // @Tags 用户模块
 // @Accept json
 // @Produce json
-// @Param request body v1.RegisterRequest true "params"
+// @Param request body v1.RegisterReq true "params"
 // @Success 200 {object} v1.Response
 // @Router /register [post]
 func (h *UserHandler) Register(ctx *gin.Context) {
-	req := new(v1.RegisterRequest)
+	req := new(v1.RegisterReq)
 	if err := ctx.ShouldBindJSON(req); err != nil {
 		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
 		return
@@ -39,7 +41,11 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 
 	if err := h.userService.Register(ctx, req); err != nil {
 		h.logger.WithContext(ctx).Error("userService.Register error", zap.Error(err))
-		v1.HandleError(ctx, http.StatusInternalServerError, err, nil)
+		status := http.StatusInternalServerError
+		if errors.Is(err, v1.ErrUsernameAlreadyUse) || errors.Is(err, v1.ErrPasswordInvalid) || errors.Is(err, v1.ErrUsernameInvalid) || errors.Is(err, v1.ErrPasswordSimple) {
+			status = http.StatusBadRequest
+		}
+		v1.HandleError(ctx, status, err, nil)
 		return
 	}
 
@@ -53,35 +59,33 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 // @Tags 用户模块
 // @Accept json
 // @Produce json
-// @Param request body v1.LoginRequest true "params"
-// @Success 200 {object} v1.LoginResponse
+// @Param request body v1.LoginReq true "params"
+// @Success 200 {object} v1.Response
 // @Router /login [post]
 func (h *UserHandler) Login(ctx *gin.Context) {
-	var req v1.LoginRequest
+	var req v1.LoginReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
 		return
 	}
 
-	token, err := h.userService.Login(ctx, &req)
+	loginResp, err := h.userService.Login(ctx, &req)
 	if err != nil {
-		v1.HandleError(ctx, http.StatusUnauthorized, v1.ErrUnauthorized, nil)
+		v1.HandleError(ctx, http.StatusInternalServerError, err, nil)
 		return
 	}
-	v1.HandleSuccess(ctx, v1.LoginResponseData{
-		AccessToken: token,
-	})
+	v1.HandleSuccess(ctx, loginResp)
 }
 
 // GetProfile godoc
-// @Summary 获取用户信息
+// @Summary 获取当前用户信息
 // @Schemes
 // @Description
 // @Tags 用户模块
 // @Accept json
 // @Produce json
 // @Security Bearer
-// @Success 200 {object} v1.GetProfileResponse
+// @Success 200 {object} v1.Response
 // @Router /user [get]
 func (h *UserHandler) GetProfile(ctx *gin.Context) {
 	userId := GetUserIdFromCtx(ctx)
@@ -90,37 +94,75 @@ func (h *UserHandler) GetProfile(ctx *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetProfile(ctx, userId)
+	user, err := h.userService.GetUserInfo(ctx, userId)
 	if err != nil {
-		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
+		status := http.StatusInternalServerError
+		if errors.Is(err, v1.ErrNotFound) {
+			status = http.StatusNotFound
+		}
+		v1.HandleError(ctx, status, err, nil)
 		return
 	}
 
 	v1.HandleSuccess(ctx, user)
 }
 
-// UpdateProfile godoc
-// @Summary 修改用户信息
+// GetUserSettings godoc
+// @Summary 获取用户配置
 // @Schemes
 // @Description
 // @Tags 用户模块
 // @Accept json
 // @Produce json
 // @Security Bearer
-// @Param request body v1.UpdateProfileRequest true "params"
 // @Success 200 {object} v1.Response
-// @Router /user [put]
-func (h *UserHandler) UpdateProfile(ctx *gin.Context) {
+// @Router /user/settings [get]
+func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
 	userId := GetUserIdFromCtx(ctx)
+	if userId == "" {
+		v1.HandleError(ctx, http.StatusUnauthorized, v1.ErrUnauthorized, nil)
+		return
+	}
 
-	var req v1.UpdateProfileRequest
+	settings, err := h.userService.GetUserSettings(ctx, userId)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, v1.ErrNotFound) {
+			status = http.StatusNotFound
+		}
+		v1.HandleError(ctx, status, err, nil)
+		return
+	}
+
+	v1.HandleSuccess(ctx, settings)
+}
+
+// UpdateUserSettings godoc
+// @Summary 更新用户配置
+// @Schemes
+// @Description
+// @Tags 用户模块
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body v1.UpdateUserSettingsReq true "params"
+// @Success 200 {object} v1.Response
+// @Router /user/settings [put]
+func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
+	userId := GetUserIdFromCtx(ctx)
+	if userId == "" {
+		v1.HandleError(ctx, http.StatusUnauthorized, v1.ErrUnauthorized, nil)
+		return
+	}
+
+	var req v1.UpdateUserSettingsReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
 		return
 	}
 
-	if err := h.userService.UpdateProfile(ctx, userId, &req); err != nil {
-		v1.HandleError(ctx, http.StatusInternalServerError, v1.ErrInternalServerError, nil)
+	if err := h.userService.UpdateUserSettings(ctx, userId, &req); err != nil {
+		v1.HandleError(ctx, http.StatusInternalServerError, err, nil)
 		return
 	}
 

@@ -8,6 +8,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
+	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -18,8 +20,6 @@ type Logger struct {
 }
 
 func NewLog(conf *viper.Viper) *Logger {
-	// log address "out.log" User-defined
-	lp := conf.GetString("log.log_file_name")
 	lv := conf.GetString("log.log_level")
 	var level zapcore.Level
 	//debug<info<warn<error<fatal<panic
@@ -35,13 +35,7 @@ func NewLog(conf *viper.Viper) *Logger {
 	default:
 		level = zap.InfoLevel
 	}
-	hook := lumberjack.Logger{
-		Filename:   lp,                             // Log file path
-		MaxSize:    conf.GetInt("log.max_size"),    // Maximum size unit for each log file: M
-		MaxBackups: conf.GetInt("log.max_backups"), // The maximum number of backups that can be saved for log files
-		MaxAge:     conf.GetInt("log.max_age"),     // Maximum number of days the file can be saved
-		Compress:   conf.GetBool("log.compress"),   // Compression or not
-	}
+	hook := newDailyHook(conf)
 
 	var encoder zapcore.Encoder
 	if conf.GetString("log.encoding") == "console" {
@@ -77,7 +71,7 @@ func NewLog(conf *viper.Viper) *Logger {
 	// default(both) log to console and file
 	core := zapcore.NewCore(
 		encoder,
-		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), // Print to console and file
+		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(hook)), // 同时写控制台和文件
 		level,
 	)
 	mode := conf.GetString("log.mode")
@@ -91,7 +85,7 @@ func NewLog(conf *viper.Viper) *Logger {
 	case "file":
 		core = zapcore.NewCore(
 			encoder,
-			zapcore.AddSync(&hook),
+			zapcore.AddSync(hook),
 			level,
 		)
 	}
@@ -104,6 +98,70 @@ func NewLog(conf *viper.Viper) *Logger {
 func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	//enc.AppendString(t.Format("2006-01-02 15:04:05"))
 	enc.AppendString(t.Format("2006-01-02 15:04:05.000000000"))
+}
+
+type dailyHook struct {
+	mu          sync.Mutex
+	writer      *lumberjack.Logger
+	currentDate string
+	conf        *viper.Viper
+	baseDir     string
+	ext         string
+}
+
+func newDailyHook(conf *viper.Viper) *dailyHook {
+	basePath := conf.GetString("log.log_file_name")
+	if basePath == "" {
+		basePath = "./storage/logs/server.log"
+	}
+	baseDir := filepath.Dir(basePath)
+	if err := os.MkdirAll(baseDir, 0o755); err != nil {
+		panic(err)
+	}
+	ext := filepath.Ext(basePath)
+	if ext == "" {
+		ext = ".log"
+	}
+	return &dailyHook{
+		conf:    conf,
+		baseDir: baseDir,
+		ext:     ext,
+	}
+}
+
+func (h *dailyHook) filePath(date string) string {
+	return filepath.Join(h.baseDir, date+h.ext)
+}
+
+func (h *dailyHook) ensureWriter() {
+	now := time.Now().Format("2006-01-02")
+	if h.writer != nil && h.currentDate == now {
+		return
+	}
+	h.currentDate = now
+	h.writer = &lumberjack.Logger{
+		Filename:   h.filePath(now),
+		MaxSize:    h.conf.GetInt("log.max_size"),
+		MaxBackups: h.conf.GetInt("log.max_backups"),
+		MaxAge:     h.conf.GetInt("log.max_age"),
+		Compress:   h.conf.GetBool("log.compress"),
+	}
+}
+
+func (h *dailyHook) Write(p []byte) (int, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.ensureWriter()
+	return h.writer.Write(p)
+}
+
+func (h *dailyHook) Sync() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.writer == nil {
+		return nil
+	}
+	return h.writer.Close()
 }
 
 // WithValue Adds a field to the specified context

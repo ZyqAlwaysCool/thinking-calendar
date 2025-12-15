@@ -1,12 +1,20 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-16 15:59:27
+ */
 package server
 
 import (
-	"github.com/gin-gonic/gin"
 	apiV1 "backend/api/v1"
 	"backend/docs"
 	"backend/internal/middleware"
 	"backend/internal/router"
 	"backend/pkg/server/http"
+
+	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -48,6 +56,9 @@ func NewHTTPServer(
 
 	v1 := s.Group("/v1")
 	router.InitUserRouter(deps, v1)
+	router.InitRecordRouter(deps, v1)
+	router.InitReportRouter(deps, v1)
+	router.InitDashboardRouter(deps, v1)
 
 	return s
 }

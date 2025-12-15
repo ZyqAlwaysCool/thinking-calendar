@@ -1,9 +1,15 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-15 16:11:27
+ */
 package job
 
 import (
-	"context"
 	"backend/internal/repository"
-	"time"
+	"context"
 )
 
 type UserJob interface {
@@ -27,8 +33,9 @@ type userJob struct {
 
 func (t userJob) KafkaConsumer(ctx context.Context) error {
 	// do something
-	for {
-		t.logger.Info("KafkaConsumer")
-		time.Sleep(time.Second * 5)
-	}
+	// for {
+	// 	t.logger.Info("KafkaConsumer")
+	// 	time.Sleep(time.Second * 5)
+	// }
+	return nil
 }

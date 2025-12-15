@@ -7,18 +7,18 @@ import (
 )
 
 type Response struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
 }
 
 func HandleSuccess(ctx *gin.Context, data interface{}) {
 	if data == nil {
 		data = map[string]interface{}{}
 	}
-	resp := Response{Code: errorCodeMap[ErrSuccess], Message: ErrSuccess.Error(), Data: data}
+	resp := Response{Code: errorCodeMap[ErrSuccess], Msg: ErrSuccess.Error(), Data: data}
 	if _, ok := errorCodeMap[ErrSuccess]; !ok {
-		resp = Response{Code: 0, Message: "", Data: data}
+		resp = Response{Code: 0, Msg: "", Data: data}
 	}
 	ctx.JSON(http.StatusOK, resp)
 }
@@ -27,9 +27,9 @@ func HandleError(ctx *gin.Context, httpCode int, err error, data interface{}) {
 	if data == nil {
 		data = map[string]string{}
 	}
-	resp := Response{Code: errorCodeMap[err], Message: err.Error(), Data: data}
+	resp := Response{Code: errorCodeMap[err], Msg: err.Error(), Data: data}
 	if _, ok := errorCodeMap[err]; !ok {
-		resp = Response{Code: 500, Message: "unknown error", Data: data}
+		resp = Response{Code: 500, Msg: "未知错误", Data: data}
 	}
 	ctx.JSON(httpCode, resp)
 }

@@ -38,17 +38,23 @@
 说明：除登录注册外均需 Authorization 头；所有响应格式 `{code:number,msg:string,data:any}`，成功时 code=0、msg=success。日期格式 `YYYY-MM-DD`，时间戳 ISO8601。列表按用户隔离。
 
 ### 4.1 认证与用户（单 token 模式，accessToken 默认 24h，所有对外交互使用 user_id 作为唯一标识）
-- `POST /api/auth/register`
+- `POST /v1/register`
   - 说明：注册并登录。
   - 请求体：`{username:string(3-20), password:string(6-32)}`
   - 响应 data：`{user:{user_id:string, name:string}, accessToken:string, expiresIn:number(秒)}`
-- `POST /api/auth/login`
+- `POST /v1/login`
   - 说明：登录（前端按钮“登录/注册”，不存在用户时可由后端自动创建，默认开启）。
   - 请求体：`{username:string, password:string}`
   - 响应同注册。
-- `GET /api/auth/profile`
-  - 说明：获取当前用户信息与设置。
-  - 响应 data：`{user_id:string, name:string, avatar?:string, settings:UserSetting}`
+- `GET /v1/user/`
+  - 说明：获取当前用户信息。
+  - 响应 data：`{user_id:string, name:string, avatar:string, is_valid:bool, last_login_at:string}`
+- `GET /v1/user/settings`
+  - 说明：获取用户设置
+  - 响应 data：`{user_id:string, report_template_week:string, report_template_month:string, auto_generate_weekly:bool, weekly_report_time:string}`
+- `PUT /v1/user/settings`
+  - 说明：更新用户设置
+  - 响应 data：空, 返回成功或失败
 
 ### 4.2 工作记录
 - `GET /api/records`
@@ -75,9 +81,6 @@
   - 说明：返回全部报告，可选筛选。
   - Query：`period?:week|month|year`, `startDate?:string`, `endDate?:string`
   - 响应 data：`Report[]`
-- `GET /api/reports/recent`
-  - 说明：返回最近 5 条（按 createdAt 倒序）。
-  - 响应 data：`Report[]`
 - `GET /api/reports/:id`（建议补充，供轮询/占位）
   - 说明：按 id 获取报告。
   - 响应 data：`Report`
@@ -95,7 +98,7 @@
 - `GET /api/dashboard/month`
   - 说明：返回某月的记录统计，用于看板高亮与计数。
   - Query：`month: string (YYYY-MM)`
-  - 响应 data：`{recordedDays:number, missingDays:number, rate:number, days:{date:string, hasLog:boolean}[]}`
+  - 响应 data：`{recordedDays:number, missingDays:number, rate:number, days:{date:string, hasRecord:boolean}[]}`
 - `GET /api/dashboard/summary`（可选）
   - 说明：汇总指标：累计日志数、已确认报告数、最近更新时间。
   - 响应 data：`{logCount:number, confirmedReports:number, lastUpdated?:string}`
@@ -178,18 +181,19 @@ type Report struct {
     Title      string         `gorm:"size:256;not null" json:"title"`
     Content    string         `gorm:"type:longtext;not null" json:"content"`
     Template   string         `gorm:"size:20;default:'formal'" json:"template"`
-    Summary    string         `gorm:"type:text" json:"summary,omitempty"`
+    FailedReason string         `gorm:"type:text" json:"failed_reason,omitempty"`
     Confirmed  bool           `gorm:"default:false" json:"confirmed"`
-    Status     string         `gorm:"size:20;default:'ready'" json:"status"` // ready/processing/failed
+    Status     string         `gorm:"size:20;default:'queued'" json:"status"` // queued/ready/processing/failed
     Meta       datatypes.JSONMap `gorm:"type:json" json:"meta,omitempty"` // 扩展预留
-    Version    int            `gorm:"default:1" json:"version"`
+    Version    int            `gorm:"default:0" json:"version"` //手工编辑版本号
+    GenVersion int            `gorm:"default:0" json:"version"` //生成版本号
     CreatedAt  time.Time      `gorm:"autoCreateTime;index:idx_created_desc" json:"created_at"`
     UpdatedAt  time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
     DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 }
 ```
 
-### 5.5 报告生成任务 report_jobs（用于异步/重试，当前可选）
+### 5.5 报告生成任务 report_jobs（用于异步/重试，可选）
 ```go
 type ReportJob struct {
     ReportJobID string         `gorm:"primaryKey;size:40" json:"report_job_id"` // UUID/sonyflake 前缀化生成

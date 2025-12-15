@@ -1,12 +1,20 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-15 15:54:03
+ */
 package server
 
 import (
-	"context"
 	"backend/internal/model"
 	"backend/pkg/log"
+	"context"
+	"os"
+
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"os"
 )
 
 type MigrateServer struct {
@@ -23,6 +31,9 @@ func NewMigrateServer(db *gorm.DB, log *log.Logger) *MigrateServer {
 func (m *MigrateServer) Start(ctx context.Context) error {
 	if err := m.db.AutoMigrate(
 		&model.User{},
+		&model.UserSettings{},
+		&model.Record{},
+		&model.Report{},
 	); err != nil {
 		m.log.Error("user migrate error", zap.Error(err))
 		return err

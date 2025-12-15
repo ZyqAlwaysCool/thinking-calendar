@@ -24,6 +24,69 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/dashboard/month": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "看板"
+                ],
+                "summary": "获取指定月份看板数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "月份，格式YYYY-MM",
+                        "name": "month",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/summary": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "看板"
+                ],
+                "summary": "获取看板汇总数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "consumes": [
@@ -43,7 +106,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.LoginRequest"
+                            "$ref": "#/definitions/v1.LoginReq"
                         }
                     }
                 ],
@@ -51,7 +114,163 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.LoginResponse"
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/records": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "date 为空返回当前用户全部记录，传 date 返回单日记录（不存在返回 null）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工作记录"
+                ],
+                "summary": "查询工作记录（单日或全部）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "日期，格式 YYYY-MM-DD",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "同一日期多次调用视为更新",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工作记录"
+                ],
+                "summary": "创建或更新工作记录",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.UpsertRecordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.RecordItem"
+                        }
+                    }
+                }
+            }
+        },
+        "/records/range": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "start 和 end 需为 YYYY-MM-DD，且 start \u003c end",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工作记录"
+                ],
+                "summary": "按时间范围查询工作记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "开始日期",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束日期",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.RecordItem"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/records/{record_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工作记录"
+                ],
+                "summary": "删除工作记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "记录 ID",
+                        "name": "record_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
                         }
                     }
                 }
@@ -59,7 +278,7 @@ const docTemplate = `{
         },
         "/register": {
             "post": {
-                "description": "目前只支持邮箱登录",
+                "description": "目前只支持用户名登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -77,8 +296,211 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.RegisterRequest"
+                            "$ref": "#/definitions/v1.RegisterReq"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "支持按period_type或时间范围筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "报告"
+                ],
+                "summary": "获取报告列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "报告类型 week/month/year",
+                        "name": "period_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始日期",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束日期",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "将报告标记为已确认",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "报告"
+                ],
+                "summary": "确认报告",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.ConfirmReportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/edit": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "手动修改报告内容",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "报告"
+                ],
+                "summary": "编辑报告内容",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.EditReportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/generate": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "仅创建/更新报告占位并进入队列",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "报告"
+                ],
+                "summary": "生成或重新生成报告",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.GenReportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/{report_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "按报告ID查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "报告"
+                ],
+                "summary": "获取报告详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "报告ID",
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -107,12 +529,39 @@ const docTemplate = `{
                 "tags": [
                     "用户模块"
                 ],
-                "summary": "获取用户信息",
+                "summary": "获取当前用户信息",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.GetProfileResponse"
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/settings": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户模块"
+                ],
+                "summary": "获取用户配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
                         }
                     }
                 }
@@ -132,7 +581,7 @@ const docTemplate = `{
                 "tags": [
                     "用户模块"
                 ],
-                "summary": "修改用户信息",
+                "summary": "更新用户配置",
                 "parameters": [
                     {
                         "description": "params",
@@ -140,7 +589,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.UpdateProfileRequest"
+                            "$ref": "#/definitions/v1.UpdateUserSettingsReq"
                         }
                     }
                 ],
@@ -156,85 +605,120 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "v1.GetProfileResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/v1.GetProfileResponseData"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.GetProfileResponseData": {
-            "type": "object",
-            "properties": {
-                "nickname": {
-                    "type": "string",
-                    "example": "alan"
-                },
-                "userId": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.LoginRequest": {
+        "v1.ConfirmReportReq": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "report_id"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "1234@gmail.com"
+                "report_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.EditReportReq": {
+            "type": "object",
+            "required": [
+                "content",
+                "report_id"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
                 },
+                "report_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.GenReportReq": {
+            "type": "object",
+            "required": [
+                "end_date",
+                "period_type",
+                "start_date",
+                "template"
+            ],
+            "properties": {
+                "end_date": {
+                    "type": "string",
+                    "example": "2025-12-31"
+                },
+                "period_type": {
+                    "type": "string",
+                    "example": "week"
+                },
+                "start_date": {
+                    "type": "string",
+                    "example": "2025-12-01"
+                },
+                "template": {
+                    "type": "string",
+                    "example": "formal"
+                }
+            }
+        },
+        "v1.LoginReq": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
                 "password": {
                     "type": "string",
                     "example": "123456"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
-        "v1.LoginResponse": {
+        "v1.RecordItem": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer"
+                "content": {
+                    "description": "工作内容",
+                    "type": "string",
+                    "example": "完成接口定义与联调"
                 },
-                "data": {
-                    "$ref": "#/definitions/v1.LoginResponseData"
+                "date": {
+                    "description": "日期，格式 YYYY-MM-DD",
+                    "type": "string",
+                    "example": "2025-12-11"
                 },
-                "message": {
-                    "type": "string"
+                "record_id": {
+                    "description": "唯一标识",
+                    "type": "string",
+                    "example": "rec_123"
+                },
+                "updatedAt": {
+                    "description": "最近更新时间",
+                    "type": "string",
+                    "example": "2025-12-11T10:00:00Z"
+                },
+                "version": {
+                    "description": "版本计数",
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
-        "v1.LoginResponseData": {
-            "type": "object",
-            "properties": {
-                "accessToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.RegisterRequest": {
+        "v1.RegisterReq": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "1234@gmail.com"
-                },
                 "password": {
                     "type": "string",
                     "example": "123456"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
                 }
             }
         },
@@ -245,24 +729,55 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "data": {},
-                "message": {
+                "msg": {
                     "type": "string"
                 }
             }
         },
-        "v1.UpdateProfileRequest": {
+        "v1.UpdateUserSettingsReq": {
             "type": "object",
             "required": [
-                "email"
+                "user_id"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "1234@gmail.com"
+                "auto_generate_weekly": {
+                    "type": "boolean"
                 },
-                "nickname": {
+                "report_template_month": {
+                    "description": "用户自定义月报提示词模板",
+                    "type": "string"
+                },
+                "report_template_week": {
+                    "description": "用户自定义周报提示词模板",
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "weekly_report_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.UpsertRecordReq": {
+            "type": "object",
+            "required": [
+                "content",
+                "date"
+            ],
+            "properties": {
+                "content": {
+                    "description": "记录内容",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "记录日期",
                     "type": "string",
-                    "example": "alan"
+                    "example": "2025-12-11"
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {}
                 }
             }
         }
@@ -279,11 +794,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
-	Host:             "localhost:8000",
+	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Nunu Example API",
-	Description:      "This is a sample server celler server.",
+	Title:            "thinking calendar API",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -1,27 +1,38 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-17 15:17:39
+ */
 package server
 
 import (
-	"context"
-	"github.com/go-co-op/gocron"
 	"backend/internal/task"
 	"backend/pkg/log"
-	"go.uber.org/zap"
+	"context"
 	"time"
+
+	"github.com/go-co-op/gocron"
+	"go.uber.org/zap"
 )
 
 type TaskServer struct {
-	log       *log.Logger
-	scheduler *gocron.Scheduler
-	userTask  task.UserTask
+	log        *log.Logger
+	scheduler  *gocron.Scheduler
+	userTask   task.UserTask
+	reportTask task.ReportTask
 }
 
 func NewTaskServer(
 	log *log.Logger,
 	userTask task.UserTask,
+	reportTask task.ReportTask,
 ) *TaskServer {
 	return &TaskServer{
-		log:      log,
-		userTask: userTask,
+		log:        log,
+		userTask:   userTask,
+		reportTask: reportTask,
 	}
 }
 func (t *TaskServer) Start(ctx context.Context) error {
@@ -29,20 +40,32 @@ func (t *TaskServer) Start(ctx context.Context) error {
 		t.log.Error("TaskServer Panic", zap.String("job", jobName), zap.Any("recover", recoverData))
 	})
 
-	// eg: crontab task
-	t.scheduler = gocron.NewScheduler(time.UTC)
-	// if you are in China, you will need to change the time zone as follows
-	// t.scheduler = gocron.NewScheduler(time.FixedZone("PRC", 8*60*60))
+	if err := t.reportTask.Start(ctx); err != nil {
+		t.log.Error("start report task failed", zap.Error(err))
+	}
 
-	//_, err := t.scheduler.Every("3s").Do(func()
-	_, err := t.scheduler.CronWithSeconds("0/3 * * * * *").Do(func() {
-		err := t.userTask.CheckUser(ctx)
+	// t.scheduler = gocron.NewScheduler(time.UTC)
+	// if you are in China, you will need to change the time zone as follows
+	t.scheduler = gocron.NewScheduler(time.FixedZone("PRC", 8*60*60))
+
+	// _, err := t.scheduler.CronWithSeconds("0/30 * * * * *").Do(func() {
+	// 	err := t.userTask.CheckUser(ctx)
+	// 	if err != nil {
+	// 		t.log.Error("检查用户任务失败", zap.Error(err))
+	// 	}
+	// })
+	// if err != nil {
+	// 	t.log.Error("检查用户任务失败", zap.Error(err))
+	// }
+
+	_, err := t.scheduler.CronWithSeconds("0/5 * * * * *").Do(func() {
+		err := t.reportTask.ProcessReportQueue(ctx)
 		if err != nil {
-			t.log.Error("CheckUser error", zap.Error(err))
+			t.log.Error("report task failed", zap.Error(err))
 		}
 	})
 	if err != nil {
-		t.log.Error("CheckUser error", zap.Error(err))
+		t.log.Error("report task failed", zap.Error(err))
 	}
 
 	t.scheduler.StartBlocking()
@@ -50,6 +73,9 @@ func (t *TaskServer) Start(ctx context.Context) error {
 }
 func (t *TaskServer) Stop(ctx context.Context) error {
 	t.scheduler.Stop()
+	if err := t.reportTask.Stop(ctx); err != nil {
+		t.log.Error("stop report task failed", zap.Error(err))
+	}
 	t.log.Info("TaskServer stop...")
 	return nil
 }

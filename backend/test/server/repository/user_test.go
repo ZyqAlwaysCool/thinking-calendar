@@ -1,14 +1,14 @@
 package repository
 
 import (
-	"context"
 	"backend/pkg/log"
+	"context"
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"backend/internal/model"
 	"backend/internal/repository"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -43,18 +43,17 @@ func TestUserRepository_Create(t *testing.T) {
 
 	ctx := context.Background()
 	user := &model.User{
-		Id:        1,
-		UserId:    "123",
-		Nickname:  "Test",
+		UserID:    "123",
+		Username:  "test",
 		Password:  "password",
-		Email:     "test@example.com",
+		Avatar:    "",
+		IsValid:   true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO `users`").
-		WithArgs(user.UserId, user.Nickname, user.Password, user.Email, user.CreatedAt, user.UpdatedAt, user.DeletedAt, user.Id).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
@@ -69,11 +68,11 @@ func TestUserRepository_Update(t *testing.T) {
 
 	ctx := context.Background()
 	user := &model.User{
-		Id:        1,
-		UserId:    "123",
-		Nickname:  "Test",
+		UserID:    "123",
+		Username:  "test",
 		Password:  "password",
-		Email:     "test@example.com",
+		Avatar:    "",
+		IsValid:   true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -94,14 +93,14 @@ func TestUserRepository_GetById(t *testing.T) {
 	ctx := context.Background()
 	userId := "123"
 
-	rows := sqlmock.NewRows([]string{"id", "user_id", "username", "nickname", "password", "email", "created_at", "updated_at"}).
-		AddRow(1, "123", "test", "Test", "password", "test@example.com", time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"user_id", "username", "password", "avatar", "is_valid", "last_login_at", "created_at", "updated_at", "deleted_at"}).
+		AddRow("123", "test", "password", "", true, nil, time.Now(), time.Now(), nil)
 	mock.ExpectQuery("SELECT \\* FROM `users`").WillReturnRows(rows)
 
 	user, err := userRepo.GetByID(ctx, userId)
 	assert.NoError(t, err)
 	assert.NotNil(t, user)
-	assert.Equal(t, "123", user.UserId)
+	assert.Equal(t, "123", user.UserID)
 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
@@ -110,16 +109,16 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 	userRepo, mock := setupRepository(t)
 
 	ctx := context.Background()
-	email := "test@example.com"
+	username := "test"
 
-	rows := sqlmock.NewRows([]string{"id", "user_id", "username", "nickname", "password", "email", "created_at", "updated_at"}).
-		AddRow(1, "123", "test", "Test", "password", "test@example.com", time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"user_id", "username", "password", "avatar", "is_valid", "last_login_at", "created_at", "updated_at", "deleted_at"}).
+		AddRow("123", "test", "password", "", true, time.Now(), time.Now(), time.Now(), nil)
 	mock.ExpectQuery("SELECT \\* FROM `users`").WillReturnRows(rows)
 
-	user, err := userRepo.GetByEmail(ctx, email)
+	user, err := userRepo.GetByUsername(ctx, username)
 	assert.NoError(t, err)
 	assert.NotNil(t, user)
-	assert.Equal(t, "test@example.com", user.Email)
+	assert.Equal(t, "test", user.Username)
 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

@@ -1,6 +1,14 @@
 //go:build wireinject
 // +build wireinject
 
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-17 18:07:50
+ */
+
 package wire
 
 import (
@@ -15,6 +23,7 @@ import (
 	"backend/pkg/log"
 	"backend/pkg/server/http"
 	"backend/pkg/sid"
+
 	"github.com/google/wire"
 	"github.com/spf13/viper"
 )
@@ -26,22 +35,32 @@ var repositorySet = wire.NewSet(
 	repository.NewRepository,
 	repository.NewTransaction,
 	repository.NewUserRepository,
+	repository.NewUserSettingsRepository,
+	repository.NewRecordRepository,
+	repository.NewReportRepository,
 )
 
 var serviceSet = wire.NewSet(
 	service.NewService,
 	service.NewUserService,
+	service.NewRecordService,
+	service.NewReportService,
+	service.NewDashboardService,
 )
 
 var handlerSet = wire.NewSet(
 	handler.NewHandler,
 	handler.NewUserHandler,
+	handler.NewRecordHandler,
+	handler.NewReportHandler,
+	handler.NewDashboardHandler,
 )
 
 var jobSet = wire.NewSet(
 	job.NewJob,
 	job.NewUserJob,
 )
+
 var serverSet = wire.NewSet(
 	server.NewHTTPServer,
 	server.NewJobServer,
@@ -51,11 +70,10 @@ var serverSet = wire.NewSet(
 func newApp(
 	httpServer *http.Server,
 	jobServer *server.JobServer,
-	// task *server.Task,
 ) *app.App {
 	return app.NewApp(
 		app.WithServer(httpServer, jobServer),
-		app.WithName("demo-server"),
+		app.WithName("server"),
 	)
 }
 

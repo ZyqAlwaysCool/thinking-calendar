@@ -1,3 +1,10 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-15 14:43:22
+ */
 package main
 
 import (
@@ -8,19 +15,18 @@ import (
 	"backend/cmd/server/wire"
 	"backend/pkg/config"
 	"backend/pkg/log"
+
 	"go.uber.org/zap"
 )
 
-// @title           Nunu Example API
+// @title           thinking calendar API
 // @version         1.0.0
-// @description     This is a sample server celler server.
 // @termsOfService  http://swagger.io/terms/
 // @contact.name   API Support
 // @contact.url    http://www.swagger.io/support
 // @contact.email  support@swagger.io
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-// @host      localhost:8000
 // @securityDefinitions.apiKey Bearer
 // @in header
 // @name Authorization

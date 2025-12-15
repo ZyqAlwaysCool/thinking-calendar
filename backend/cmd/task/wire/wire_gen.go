@@ -9,8 +9,10 @@ package wire
 import (
 	"backend/internal/repository"
 	"backend/internal/server"
+	"backend/internal/service"
 	"backend/internal/task"
 	"backend/pkg/app"
+	"backend/pkg/jwt"
 	"backend/pkg/log"
 	"backend/pkg/sid"
 	"github.com/google/wire"
@@ -27,7 +29,15 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	taskTask := task.NewTask(transaction, logger, sidSid)
 	userRepository := repository.NewUserRepository(repositoryRepository)
 	userTask := task.NewUserTask(taskTask, userRepository)
-	taskServer := server.NewTaskServer(logger, userTask)
+	reportRepository := repository.NewReportRepository(repositoryRepository)
+	jwtJWT := jwt.NewJwt(viperViper)
+	serviceService := service.NewService(transaction, logger, sidSid, jwtJWT)
+	recordRespository := repository.NewRecordRepository(repositoryRepository)
+	recordService := service.NewRecordService(serviceService, recordRespository)
+	userSettingsRepository := repository.NewUserSettingsRepository(repositoryRepository)
+	reportService := service.NewReportService(serviceService, reportRepository, recordService, userSettingsRepository)
+	reportTask := task.NewReportTask(taskTask, reportRepository, reportService)
+	taskServer := server.NewTaskServer(logger, userTask, reportTask)
 	appApp := newApp(taskServer)
 	return appApp, func() {
 	}, nil
@@ -35,14 +45,16 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 // wire.go:
 
-var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository)
+var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository)
 
-var taskSet = wire.NewSet(task.NewTask, task.NewUserTask)
+var serviceSet = wire.NewSet(service.NewService, service.NewRecordService, service.NewReportService)
+
+var taskSet = wire.NewSet(task.NewTask, task.NewUserTask, task.NewReportTask)
 
 var serverSet = wire.NewSet(server.NewTaskServer)
 
 // build App
 func newApp(task2 *server.TaskServer,
 ) *app.App {
-	return app.NewApp(app.WithServer(task2), app.WithName("demo-task"))
+	return app.NewApp(app.WithServer(task2), app.WithName("task"))
 }

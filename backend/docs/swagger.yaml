@@ -1,92 +1,179 @@
 definitions:
-  v1.GetProfileResponse:
+  v1.ConfirmReportReq:
     properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/v1.GetProfileResponseData'
-      message:
+      report_id:
         type: string
+    required:
+    - report_id
     type: object
-  v1.GetProfileResponseData:
+  v1.EditReportReq:
     properties:
-      nickname:
-        example: alan
+      content:
         type: string
-      userId:
+      report_id:
         type: string
+    required:
+    - content
+    - report_id
     type: object
-  v1.LoginRequest:
+  v1.GenReportReq:
     properties:
-      email:
-        example: 1234@gmail.com
+      end_date:
+        example: "2025-12-31"
         type: string
+      period_type:
+        example: week
+        type: string
+      start_date:
+        example: "2025-12-01"
+        type: string
+      template:
+        example: formal
+        type: string
+    required:
+    - end_date
+    - period_type
+    - start_date
+    - template
+    type: object
+  v1.LoginReq:
+    properties:
       password:
         example: "123456"
         type: string
+      username:
+        example: alice
+        type: string
     required:
-    - email
     - password
+    - username
     type: object
-  v1.LoginResponse:
+  v1.RecordItem:
     properties:
-      code:
+      content:
+        description: 工作内容
+        example: 完成接口定义与联调
+        type: string
+      date:
+        description: 日期，格式 YYYY-MM-DD
+        example: "2025-12-11"
+        type: string
+      record_id:
+        description: 唯一标识
+        example: rec_123
+        type: string
+      updatedAt:
+        description: 最近更新时间
+        example: "2025-12-11T10:00:00Z"
+        type: string
+      version:
+        description: 版本计数
+        example: 1
         type: integer
-      data:
-        $ref: '#/definitions/v1.LoginResponseData'
-      message:
-        type: string
     type: object
-  v1.LoginResponseData:
+  v1.RegisterReq:
     properties:
-      accessToken:
-        type: string
-    type: object
-  v1.RegisterRequest:
-    properties:
-      email:
-        example: 1234@gmail.com
-        type: string
       password:
         example: "123456"
         type: string
+      username:
+        example: alice
+        type: string
     required:
-    - email
     - password
+    - username
     type: object
   v1.Response:
     properties:
       code:
         type: integer
       data: {}
-      message:
+      msg:
         type: string
     type: object
-  v1.UpdateProfileRequest:
+  v1.UpdateUserSettingsReq:
     properties:
-      email:
-        example: 1234@gmail.com
+      auto_generate_weekly:
+        type: boolean
+      report_template_month:
+        description: 用户自定义月报提示词模板
         type: string
-      nickname:
-        example: alan
+      report_template_week:
+        description: 用户自定义周报提示词模板
+        type: string
+      user_id:
+        type: string
+      weekly_report_time:
         type: string
     required:
-    - email
+    - user_id
     type: object
-host: localhost:8000
+  v1.UpsertRecordReq:
+    properties:
+      content:
+        description: 记录内容
+        type: string
+      date:
+        description: 记录日期
+        example: "2025-12-11"
+        type: string
+      meta:
+        additionalProperties: {}
+        type: object
+    required:
+    - content
+    - date
+    type: object
 info:
   contact:
     email: support@swagger.io
     name: API Support
     url: http://www.swagger.io/support
-  description: This is a sample server celler server.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
-  title: Nunu Example API
+  title: thinking calendar API
   version: 1.0.0
 paths:
+  /dashboard/month:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 月份，格式YYYY-MM
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 获取指定月份看板数据
+      tags:
+      - 看板
+  /dashboard/summary:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 获取看板汇总数据
+      tags:
+      - 看板
   /login:
     post:
       consumes:
@@ -97,29 +184,126 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.LoginRequest'
+          $ref: '#/definitions/v1.LoginReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.LoginResponse'
+            $ref: '#/definitions/v1.Response'
       summary: 账号登录
       tags:
       - 用户模块
+  /records:
+    get:
+      consumes:
+      - application/json
+      description: date 为空返回当前用户全部记录，传 date 返回单日记录（不存在返回 null）
+      parameters:
+      - description: 日期，格式 YYYY-MM-DD
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 查询工作记录（单日或全部）
+      tags:
+      - 工作记录
+    post:
+      consumes:
+      - application/json
+      description: 同一日期多次调用视为更新
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpsertRecordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.RecordItem'
+      security:
+      - Bearer: []
+      summary: 创建或更新工作记录
+      tags:
+      - 工作记录
+  /records/{record_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: 记录 ID
+        in: path
+        name: record_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 删除工作记录
+      tags:
+      - 工作记录
+  /records/range:
+    get:
+      consumes:
+      - application/json
+      description: start 和 end 需为 YYYY-MM-DD，且 start < end
+      parameters:
+      - description: 开始日期
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: 结束日期
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.RecordItem'
+            type: array
+      security:
+      - Bearer: []
+      summary: 按时间范围查询工作记录
+      tags:
+      - 工作记录
   /register:
     post:
       consumes:
       - application/json
-      description: 目前只支持邮箱登录
+      description: 目前只支持用户名登录
       parameters:
       - description: params
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.RegisterRequest'
+          $ref: '#/definitions/v1.RegisterReq'
       produces:
       - application/json
       responses:
@@ -130,6 +314,132 @@ paths:
       summary: 用户注册
       tags:
       - 用户模块
+  /reports:
+    get:
+      consumes:
+      - application/json
+      description: 支持按period_type或时间范围筛选
+      parameters:
+      - description: 报告类型 week/month/year
+        in: query
+        name: period_type
+        required: true
+        type: string
+      - description: 开始日期
+        in: query
+        name: start_date
+        type: string
+      - description: 结束日期
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 获取报告列表
+      tags:
+      - 报告
+  /reports/{report_id}:
+    get:
+      consumes:
+      - application/json
+      description: 按报告ID查询
+      parameters:
+      - description: 报告ID
+        in: path
+        name: report_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 获取报告详情
+      tags:
+      - 报告
+  /reports/confirm:
+    post:
+      consumes:
+      - application/json
+      description: 将报告标记为已确认
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.ConfirmReportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 确认报告
+      tags:
+      - 报告
+  /reports/edit:
+    post:
+      consumes:
+      - application/json
+      description: 手动修改报告内容
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.EditReportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 编辑报告内容
+      tags:
+      - 报告
+  /reports/generate:
+    post:
+      consumes:
+      - application/json
+      description: 仅创建/更新报告占位并进入队列
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GenReportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 生成或重新生成报告
+      tags:
+      - 报告
   /user:
     get:
       consumes:
@@ -140,10 +450,26 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.GetProfileResponse'
+            $ref: '#/definitions/v1.Response'
       security:
       - Bearer: []
-      summary: 获取用户信息
+      summary: 获取当前用户信息
+      tags:
+      - 用户模块
+  /user/settings:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 获取用户配置
       tags:
       - 用户模块
     put:
@@ -155,7 +481,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.UpdateProfileRequest'
+          $ref: '#/definitions/v1.UpdateUserSettingsReq'
       produces:
       - application/json
       responses:
@@ -165,7 +491,7 @@ paths:
             $ref: '#/definitions/v1.Response'
       security:
       - Bearer: []
-      summary: 修改用户信息
+      summary: 更新用户配置
       tags:
       - 用户模块
 securityDefinitions:

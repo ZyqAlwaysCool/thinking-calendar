@@ -1,18 +1,28 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-15 16:49:49
+ */
 package repository
 
 import (
-	"context"
-	"errors"
 	v1 "backend/api/v1"
 	"backend/internal/model"
+	"context"
+	"errors"
+	"time"
+
 	"gorm.io/gorm"
 )
 
 type UserRepository interface {
 	Create(ctx context.Context, user *model.User) error
 	Update(ctx context.Context, user *model.User) error
-	GetByID(ctx context.Context, id string) (*model.User, error)
-	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByID(ctx context.Context, userId string) (*model.User, error)
+	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	UpdateLastLoginAt(ctx context.Context, userId string, t *time.Time) error
 }
 
 func NewUserRepository(
@@ -52,13 +62,20 @@ func (r *userRepository) GetByID(ctx context.Context, userId string) (*model.Use
 	return &user, nil
 }
 
-func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+func (r *userRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
 	var user model.User
-	if err := r.DB(ctx).Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.DB(ctx).Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepository) UpdateLastLoginAt(ctx context.Context, userId string, t *time.Time) error {
+	return r.DB(ctx).Model(&model.User{}).
+		Where("user_id = ?", userId).
+		Update("last_login_at", t).
+		Error
 }

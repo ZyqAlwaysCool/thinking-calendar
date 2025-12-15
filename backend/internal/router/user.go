@@ -1,8 +1,16 @@
+/*
+ * @Description:
+ * @Author: zyq
+ * @Date: 2025-12-12 16:56:59
+ * @LastEditors: zyq
+ * @LastEditTime: 2025-12-16 17:37:21
+ */
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"backend/internal/middleware"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitUserRouter(
@@ -15,15 +23,11 @@ func InitUserRouter(
 		noAuthRouter.POST("/register", deps.UserHandler.Register)
 		noAuthRouter.POST("/login", deps.UserHandler.Login)
 	}
-	// Non-strict permission routing group
-	noStrictAuthRouter := r.Group("/").Use(middleware.NoStrictAuth(deps.JWT, deps.Logger))
-	{
-		noStrictAuthRouter.GET("/user", deps.UserHandler.GetProfile)
-	}
-
 	// Strict permission routing group
 	strictAuthRouter := r.Group("/").Use(middleware.StrictAuth(deps.JWT, deps.Logger))
 	{
-		strictAuthRouter.PUT("/user", deps.UserHandler.UpdateProfile)
+		strictAuthRouter.GET("/user", deps.UserHandler.GetProfile)
+		strictAuthRouter.GET("/user/settings", deps.UserHandler.GetUserSettings)
+		strictAuthRouter.PUT("/user/settings", deps.UserHandler.UpdateUserSettings)
 	}
 }
