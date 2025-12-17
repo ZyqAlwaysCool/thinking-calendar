@@ -12,6 +12,7 @@
 package wire
 
 import (
+	"backend/internal/llm"
 	"backend/internal/repository"
 	"backend/internal/server"
 	"backend/internal/service"
@@ -40,6 +41,7 @@ var serviceSet = wire.NewSet(
 	service.NewService,
 	service.NewRecordService,
 	service.NewReportService,
+	llm.NewOpenAIClient,
 )
 
 var taskSet = wire.NewSet(

@@ -14,6 +14,7 @@ package wire
 import (
 	"backend/internal/handler"
 	"backend/internal/job"
+	"backend/internal/llm"
 	"backend/internal/repository"
 	"backend/internal/router"
 	"backend/internal/server"
@@ -46,6 +47,7 @@ var serviceSet = wire.NewSet(
 	service.NewRecordService,
 	service.NewReportService,
 	service.NewDashboardService,
+	llm.NewOpenAIClient,
 )
 
 var handlerSet = wire.NewSet(

@@ -3,7 +3,7 @@
  * @Author: zyq
  * @Date: 2025-12-12 16:56:59
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-15 14:43:22
+ * @LastEditTime: 2025-12-17 21:16:48
  */
 package main
 
@@ -11,6 +11,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	"backend/cmd/server/wire"
 	"backend/pkg/config"
@@ -37,6 +38,12 @@ func main() {
 	flag.Parse()
 	conf := config.NewConfig(*envConf)
 
+	apiKey := os.Getenv("MODEL_API_KEY")
+	if apiKey == "" {
+		panic("MODEL_API_KEY 未配置，禁止启动服务")
+	}
+	conf.Set("llm.openai.api_key", apiKey)
+
 	logger := log.NewLog(conf)
 
 	app, cleanup, err := wire.NewWire(conf, logger)
@@ -45,7 +52,7 @@ func main() {
 		panic(err)
 	}
 	logger.Info("server start", zap.String("host", fmt.Sprintf("http://%s:%d", conf.GetString("http.host"), conf.GetInt("http.port"))))
-	logger.Info("docs addr", zap.String("addr", fmt.Sprintf("http://%s:%d/swagger/index.html", conf.GetString("http.host"), conf.GetInt("http.port"))))
+	logger.Info("swagger addr", zap.String("addr", fmt.Sprintf("http://%s:%d/swagger/index.html", conf.GetString("http.host"), conf.GetInt("http.port"))))
 	if err = app.Run(context.Background()); err != nil {
 		panic(err)
 	}

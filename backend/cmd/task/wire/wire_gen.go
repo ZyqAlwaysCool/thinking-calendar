@@ -7,6 +7,7 @@
 package wire
 
 import (
+	"backend/internal/llm"
 	"backend/internal/repository"
 	"backend/internal/server"
 	"backend/internal/service"
@@ -35,7 +36,11 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	recordRespository := repository.NewRecordRepository(repositoryRepository)
 	recordService := service.NewRecordService(serviceService, recordRespository)
 	userSettingsRepository := repository.NewUserSettingsRepository(repositoryRepository)
-	reportService := service.NewReportService(serviceService, reportRepository, recordService, userSettingsRepository)
+	openAIClient, err := llm.NewOpenAIClient(viperViper)
+	if err != nil {
+		return nil, nil, err
+	}
+	reportService := service.NewReportService(serviceService, reportRepository, recordService, userSettingsRepository, openAIClient)
 	reportTask := task.NewReportTask(taskTask, reportRepository, reportService)
 	taskServer := server.NewTaskServer(logger, userTask, reportTask)
 	appApp := newApp(taskServer)
@@ -47,7 +52,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewRecordService, service.NewReportService)
+var serviceSet = wire.NewSet(service.NewService, service.NewRecordService, service.NewReportService, llm.NewOpenAIClient)
 
 var taskSet = wire.NewSet(task.NewTask, task.NewUserTask, task.NewReportTask)
 

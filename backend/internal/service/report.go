@@ -3,12 +3,13 @@
  * @Author: zyq
  * @Date: 2025-12-17 09:32:03
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 17:52:06
+ * @LastEditTime: 2025-12-17 21:38:15
  */
 package service
 
 import (
 	v1 "backend/api/v1"
+	"backend/internal/llm"
 	"backend/internal/model"
 	"backend/internal/repository"
 	"context"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -35,12 +37,14 @@ func NewReportService(
 	reportRepo repository.ReportRepository,
 	recordSvr RecordService,
 	userSettingsRepo repository.UserSettingsRepository,
+	openAIClient *llm.OpenAIClient,
 ) ReportService {
 	return &reportService{
 		Service:          service,
 		recordSvr:        recordSvr,
 		reportRepo:       reportRepo,
 		userSettingsRepo: userSettingsRepo,
+		openAIClient:     openAIClient,
 	}
 }
 
@@ -49,6 +53,7 @@ type reportService struct {
 	recordSvr        RecordService
 	reportRepo       repository.ReportRepository
 	userSettingsRepo repository.UserSettingsRepository
+	openAIClient     *llm.OpenAIClient
 }
 
 const (
@@ -78,8 +83,11 @@ func (s *reportService) GenerateReport(ctx context.Context, userId string, req *
 	if end.Before(start) {
 		return "", v1.ErrInvalidDate
 	}
-	if err := validateDateRange(req.PeriodType, start, end); err != nil {
-		return "", err
+	// 仅在生产环境进行严格的时间范围校验
+	if gin.Mode() == gin.ReleaseMode {
+		if err := validateDateRange(req.PeriodType, start, end); err != nil {
+			return "", err
+		}
 	}
 
 	report, err := s.reportRepo.GetByUnique(ctx, userId, req.PeriodType, req.StartDate, req.EndDate)
@@ -281,9 +289,10 @@ func (s *reportService) ProcessReport(ctx context.Context, reportID string, genV
 	if err != nil {
 		if updateErr := s.reportRepo.UpdateFailed(ctx, reportID, genVersion, "生成失败"); updateErr != nil {
 			s.logger.Error("mark report failed status error", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
-			return updateErr
+			return v1.ErrGenReportFailed
 		}
-		return err
+		s.logger.Error("call model failed", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(err))
+		return v1.ErrCallLLMFailed
 	}
 
 	if err := s.reportRepo.UpdateGenerated(ctx, reportID, genVersion, content, abstract); err != nil {
@@ -413,9 +422,10 @@ func (s *reportService) processYearReport(ctx context.Context, report *model.Rep
 	if err != nil {
 		if updateErr := s.reportRepo.UpdateFailed(ctx, report.ReportID, genVersion, "生成失败"); updateErr != nil {
 			s.logger.Error("mark report failed status error", zap.String("report_id", report.ReportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
-			return updateErr
+			return v1.ErrGenReportFailed
 		}
-		return err
+		s.logger.Error("call model failed", zap.String("report_id", report.ReportID), zap.Int("gen_version", genVersion), zap.Error(err))
+		return v1.ErrCallLLMFailed
 	}
 	// 写回正文与摘要，并将状态置为 ready
 	if err := s.reportRepo.UpdateGenerated(ctx, report.ReportID, genVersion, content, abstract); err != nil {
@@ -425,13 +435,10 @@ func (s *reportService) processYearReport(ctx context.Context, report *model.Rep
 }
 
 func (s *reportService) callModel(ctx context.Context, prompt string) (string, string, error) {
-	_ = ctx
-	_ = prompt
-
-	// 此处接入模型调用
-	content := "# 报告\n\n模型调用待实现 当前为测试\n"
-	abstract := "模型调用待实现"
-	return content, abstract, nil
+	if s.openAIClient == nil {
+		return "", "", errors.New("llm client not initialized")
+	}
+	return s.openAIClient.GenerateReport(ctx, prompt)
 }
 
 func (s *reportService) toReportItem(report *model.Report) v1.ReportItem {

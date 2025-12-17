@@ -25,7 +25,7 @@
   - `configs/`：按环境的配置文件。
   - `internal/server`：路由注册、全局中间件。
   - `internal/middleware`：鉴权、请求日志、恢复、跨域、限流、防重复提交。
-  - `internal/handler`：auth/log/report/stat/setting 等。
+  - `internal/handler`：auth/record/report/stat/setting 等。
   - `internal/service`：业务逻辑、事务、幂等。
   - `internal/repository`：数据访问。
   - `internal/model`：GORM 实体 + 请求/响应 DTO。
@@ -101,7 +101,7 @@
   - 响应 data：`{recordedDays:number, missingDays:number, rate:number, days:{date:string, hasRecord:boolean}[]}`
 - `GET /api/dashboard/summary`（可选）
   - 说明：汇总指标：累计日志数、已确认报告数、最近更新时间。
-  - 响应 data：`{logCount:number, confirmedReports:number, lastUpdated?:string}`
+  - 响应 data：`{recordCount:number, confirmedReports:number, lastUpdated?:string}`
 
 ### 4.5 用户设置（预留报告提示词模板）
 - `GET /api/settings`
@@ -221,7 +221,7 @@ type ReportJob struct {
 - 传输与存储：HTTPS、GZIP、CORS 白名单；软删除开启；MySQL 备份（每日全量、binlog 持续）。
 
 ## 7. 性能与扩展
-- 索引：users.username/email，logs.idx_user_date，reports.idx_user_period、idx_created_desc，report_jobs.idx_status_created。
+- 索引：users.username/email，records.idx_user_date，reports.idx_user_period、idx_created_desc，report_jobs.idx_status_created。
 - 连接池：max_idle 10、max_open 50、conn_max_lifetime 1h；慢查询告警 200ms。
 - 缓存：月度统计与 recent 报告缓存 60s；日志写入后失效相关缓存。
 - 异步：报告生成可走 report_jobs + worker，主请求直接返回生成结果或占位；幂等键 period_type+start_date+end_date+user_id。
@@ -229,7 +229,7 @@ type ReportJob struct {
 - 可观测性：Prometheus 指标、zap 日志、OpenTelemetry Trace（Handler→Service→LLM）。
 
 ## 8. 与前端对接要点
-- baseURL `/api` 不变；工作记录接口路径改为 `/api/records`（前端后续需同步替换 `/api/logs`），前端增加 Authorization 头，登录后仅缓存 accessToken（有效期 24h），过期后提示重新登录。
+- baseURL `/api` 不变；工作记录接口路径为 `/api/records`（前端已采用 record 语义，无 `/api/logs`），前端增加 Authorization 头，登录后仅缓存 accessToken（有效期 24h），过期后提示重新登录。
 - 保持字段对齐：`Record{ id,date,content,updatedAt,count }`，`Report{ id,period,startDate,endDate,title,content,confirmed,createdAt }`。后端新增字段（template/status等）可返回但前端可忽略。
 - 报告生成：如果生成耗时，先返回占位 content 并附带 status=processing，前端可轮询 `/api/reports/:id`。同步生成时直接返回最终内容即可。
 - 错误提示使用中文 msg，前端 toast 直接展示；code=0 成功，非 0 视为错误。

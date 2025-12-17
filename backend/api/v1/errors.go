@@ -3,7 +3,7 @@
  * @Author: zyq
  * @Date: 2025-12-12 16:56:59
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 16:33:17
+ * @LastEditTime: 2025-12-17 21:37:46
  */
 package v1
 
@@ -45,6 +45,8 @@ var (
 	ErrInvalidReportPeriod   = newError(3005, "报告类型错误")
 	ErrInvalidReportTemplate = newError(3006, "报告版式错误")
 	ErrReportNotReady        = newError(3007, "报告尚未生成完成")
+	ErrCallLLMFailed         = newError(3008, "调用大模型失败")
+	ErrGenReportFailed       = newError(3009, "生成报告失败")
 
 	// dashboard errors
 	ErrGetDashboardFailed = newError(4001, "获取看板数据失败")

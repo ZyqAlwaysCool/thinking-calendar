@@ -9,6 +9,7 @@ package wire
 import (
 	"backend/internal/handler"
 	"backend/internal/job"
+	"backend/internal/llm"
 	"backend/internal/repository"
 	"backend/internal/router"
 	"backend/internal/server"
@@ -40,7 +41,11 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	recordService := service.NewRecordService(serviceService, recordRespository)
 	recordHandler := handler.NewRecordHandler(handlerHandler, recordService)
 	reportRepository := repository.NewReportRepository(repositoryRepository)
-	reportService := service.NewReportService(serviceService, reportRepository, recordService, userSettingsRepository)
+	openAIClient, err := llm.NewOpenAIClient(viperViper)
+	if err != nil {
+		return nil, nil, err
+	}
+	reportService := service.NewReportService(serviceService, reportRepository, recordService, userSettingsRepository, openAIClient)
 	reportHandler := handler.NewReportHandler(handlerHandler, reportService)
 	dashboardService := service.NewDashboardService(serviceService, recordRespository, reportRepository)
 	dashboardHandler := handler.NewDashboardHandler(handlerHandler, dashboardService)
@@ -66,7 +71,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewUserService, service.NewRecordService, service.NewReportService, service.NewDashboardService)
+var serviceSet = wire.NewSet(service.NewService, service.NewUserService, service.NewRecordService, service.NewReportService, service.NewDashboardService, llm.NewOpenAIClient)
 
 var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewRecordHandler, handler.NewReportHandler, handler.NewDashboardHandler)
 

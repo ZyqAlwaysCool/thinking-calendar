@@ -5,19 +5,19 @@ type MonthDashboardReq struct {
 }
 
 type MonthDashboardResp struct {
-	RecordedDays int            `json:"recorded_days"`
-	MissingDays  int            `json:"missing_days"`
-	Rate         int            `json:"rate"`
-	Days         []MonthDayItem `json:"days"`
+	RecordedDays int            `json:"recorded_days"` //完成记录的天数
+	MissingDays  int            `json:"missing_days"`  //缺失记录的天数
+	Rate         int            `json:"rate"`          //完成率
+	Days         []MonthDayItem `json:"days"`          //每一天的记录情况
 }
 
 type MonthDayItem struct {
-	Date   string `json:"date"`
-	HasLog bool   `json:"has_log"`
+	Date      string `json:"date"`
+	HasRecord bool   `json:"has_record"`
 }
 
 type DashboardSummaryResp struct {
-	LogCount        int    `json:"log_count"`
-	ConfirmedReport int    `json:"confirmed_reports"`
-	LastUpdated     string `json:"last_updated"`
+	RecordCount      int    `json:"record_count"`
+	ConfirmedReports int    `json:"confirmed_reports"`
+	LastUpdated      string `json:"last_updated"`
 }

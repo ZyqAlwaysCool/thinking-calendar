@@ -69,13 +69,13 @@ func (s *dashboardService) GetMonth(ctx context.Context, userId string, month st
 	for i := 0; i < totalDays; i++ {
 		day := start.AddDate(0, 0, i)
 		dayStr := day.Format(reportDateLayout)
-		hasLog := recordedSet[dayStr]
-		if hasLog {
+		hasRecord := recordedSet[dayStr]
+		if hasRecord {
 			recordedCount++
 		}
 		days = append(days, v1.MonthDayItem{
-			Date:   dayStr,
-			HasLog: hasLog,
+			Date:      dayStr,
+			HasRecord: hasRecord,
 		})
 	}
 	missing := totalDays - recordedCount
@@ -104,13 +104,13 @@ func (s *dashboardService) GetSummary(ctx context.Context, userId string) (*v1.D
 		return nil, v1.ErrGetDashboardFailed
 	}
 
-	logCount := 0
+	recordCount := 0
 	latest := time.Time{}
 	for _, r := range records {
 		if r.IsDeleted {
 			continue
 		}
-		logCount++
+		recordCount++
 		if r.UpdatedAt.After(latest) {
 			latest = r.UpdatedAt
 		}
@@ -132,8 +132,8 @@ func (s *dashboardService) GetSummary(ctx context.Context, userId string) (*v1.D
 	}
 
 	return &v1.DashboardSummaryResp{
-		LogCount:        logCount,
-		ConfirmedReport: confirmedReports,
-		LastUpdated:     last,
+		RecordCount:      recordCount,
+		ConfirmedReports: confirmedReports,
+		LastUpdated:      last,
 	}, nil
 }
