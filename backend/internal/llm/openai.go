@@ -2,7 +2,7 @@
  * @Author: zyq
  * @Date: 2025-12-17 21:00:44
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 21:34:43
+ * @LastEditTime: 2025-12-17 21:49:43
  * @FilePath: /thinking-calendar/backend/internal/llm/openai.go
  * @Description:
  *
@@ -14,10 +14,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"time"
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/spf13/viper"
+)
+
+const (
+	DefaultTimeout    = 60 * time.Second
+	DefaultReqTimeout = 30 * time.Second
 )
 
 type OpenAIClient struct {
@@ -41,12 +48,15 @@ func NewOpenAIClient(conf *viper.Viper) (*OpenAIClient, error) {
 	}
 	model := conf.GetString("llm.openai.model")
 	if model == "" {
-		model = "gpt-4o-mini"
+		model = "qwen3-max"
 	}
 
 	client := openai.NewClient(
 		option.WithAPIKey(apiKey),
 		option.WithBaseURL(baseURL),
+		option.WithHTTPClient(&http.Client{
+			Timeout: DefaultTimeout,
+		}),
 	)
 
 	return &OpenAIClient{
@@ -62,6 +72,8 @@ func (c *OpenAIClient) GenerateReport(ctx context.Context, prompt string) (strin
 
 	systemPrompt := "你是一个写作助手。你必须只输出 JSON，且不得包含代码块标记。JSON 格式必须为 {\"content\":\"...\",\"abstract\":\"...\"}。content 为 Markdown 报告正文，abstract 为 1-3 句摘要。"
 
+	ctx, cancel := context.WithTimeout(ctx, DefaultReqTimeout)
+	defer cancel()
 	resp, err := c.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(c.model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
