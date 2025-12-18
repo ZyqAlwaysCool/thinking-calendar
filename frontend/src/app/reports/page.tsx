@@ -230,8 +230,8 @@ const ReportsPage = () => {
                           <span
                             className={
                               item.confirmed
-                                ? 'rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-50 dark:bg-gray-100 dark:text-gray-900'
-                                : 'rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
+                                ? 'whitespace-nowrap shrink-0 rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-50 dark:bg-gray-100 dark:text-gray-900'
+                                : 'whitespace-nowrap shrink-0 rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
                             }
                           >
                             {item.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.unconfirmed}
@@ -259,8 +259,8 @@ const ReportsPage = () => {
                           <span
                             className={
                               item.confirmed
-                                ? 'rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-50 dark:bg-gray-100 dark:text-gray-900'
-                                : 'rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
+                                ? 'whitespace-nowrap shrink-0 rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-50 dark:bg-gray-100 dark:text-gray-900'
+                                : 'whitespace-nowrap shrink-0 rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
                             }
                           >
                             {item.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.unconfirmed}
@@ -288,8 +288,8 @@ const ReportsPage = () => {
                           <span
                             className={
                               item.confirmed
-                                ? 'rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-50 dark:bg-gray-100 dark:text-gray-900'
-                                : 'rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
+                                ? 'whitespace-nowrap shrink-0 rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-50 dark:bg-gray-100 dark:text-gray-900'
+                                : 'whitespace-nowrap shrink-0 rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
                             }
                           >
                             {item.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.unconfirmed}
