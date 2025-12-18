@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Bold, Heading2, Heading3, Italic, List, ListOrdered } from 'lucide-react'
 import { PAGE_TEXT } from '@/lib/constants'
+import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown'
 import { Button } from './ui/button'
 
 type EditorProps = {
@@ -15,18 +16,21 @@ type EditorProps = {
 }
 
 export const Editor = ({ value, onChange, minHeight = 'calc(100vh - 220px)' }: EditorProps) => {
+  const settingRef = useRef(false)
+  const localChangeRef = useRef(false)
+  const lastValueRef = useRef(value)
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
-          levels: [2, 3]
+          levels: [1, 2, 3]
         }
       }),
       Placeholder.configure({
         placeholder: PAGE_TEXT.editorPlaceholder
       })
     ],
-    content: value,
+    content: markdownToHtml(value),
     editorProps: {
       attributes: {
         class:
@@ -34,13 +38,27 @@ export const Editor = ({ value, onChange, minHeight = 'calc(100vh - 220px)' }: E
       }
     },
     onUpdate({ editor }) {
-      onChange(editor.getHTML())
+      if (settingRef.current) return
+      const markdown = htmlToMarkdown(editor.getHTML())
+      localChangeRef.current = true
+      lastValueRef.current = markdown
+      onChange(markdown)
     }
   })
 
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '')
+    if (!editor) return
+    const isLocalSync = localChangeRef.current && value === lastValueRef.current
+    if (isLocalSync) {
+      localChangeRef.current = false
+      return
+    }
+    const nextHtml = markdownToHtml(value || '')
+    if (nextHtml !== editor.getHTML()) {
+      settingRef.current = true
+      editor.commands.setContent(nextHtml)
+      settingRef.current = false
+      lastValueRef.current = value
     }
   }, [editor, value])
 

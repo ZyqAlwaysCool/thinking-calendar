@@ -11,7 +11,7 @@ export const NAV_LABELS = {
 export const PAGE_TEXT = {
   loginTitle: 'Thinking-Calendar',
   loginSubtitle: '专注工作记录，AI 帮你写周报',
-  loginButton: '登录 / 注册',
+  loginButton: '登录/注册',
   loginSuccess: '登录成功',
   loginFail: '登录失败，请稍后重试',
   loginRequired: '请填写用户名和密码',
@@ -66,6 +66,7 @@ export const PAGE_TEXT = {
   copyFail: '复制失败',
   exportSuccess: '已打开打印窗口，可选择保存为 PDF',
   exportFail: '导出失败',
+  reportGeneratingHint: 'AI 正在生成，稍候即会出现内容',
   viewInDialog: '在弹窗中编辑',
   recordsCount: '条记录',
   lastUpdated: '更新',

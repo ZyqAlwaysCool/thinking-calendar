@@ -3,7 +3,7 @@
  * @Author: zyq
  * @Date: 2025-12-17 09:32:03
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 21:38:15
+ * @LastEditTime: 2025-12-18 15:03:58
  */
 package service
 
@@ -32,6 +32,11 @@ type ReportService interface {
 	ProcessQueuedReports(ctx context.Context, limit int) (int, error)
 }
 
+type reportPrompt struct {
+	system string
+	user   string
+}
+
 func NewReportService(
 	service *Service,
 	reportRepo repository.ReportRepository,
@@ -45,6 +50,7 @@ func NewReportService(
 		reportRepo:       reportRepo,
 		userSettingsRepo: userSettingsRepo,
 		openAIClient:     openAIClient,
+		promptSet:        llm.LoadPrompts(service.logger),
 	}
 }
 
@@ -54,6 +60,7 @@ type reportService struct {
 	reportRepo       repository.ReportRepository
 	userSettingsRepo repository.UserSettingsRepository
 	openAIClient     *llm.OpenAIClient
+	promptSet        llm.PromptSet
 }
 
 const (
@@ -282,10 +289,9 @@ func (s *reportService) ProcessReport(ctx context.Context, reportID string, genV
 		return v1.ErrGetUserSettingsFailed
 	}
 
-	prompt := buildPrompt(report.PeriodType, report.Template, userSettings, records)
-	_ = prompt
+	prompt := s.buildUserPrompt(report.PeriodType, report.Template, userSettings, records, report.Title)
 
-	content, abstract, err := s.callModel(ctx, prompt)
+	content, abstract, err := s.callModel(ctx, prompt.system, prompt.user)
 	if err != nil {
 		if updateErr := s.reportRepo.UpdateFailed(ctx, reportID, genVersion, "生成失败"); updateErr != nil {
 			s.logger.Error("mark report failed status error", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
@@ -417,8 +423,9 @@ func (s *reportService) processYearReport(ctx context.Context, report *model.Rep
 	}
 
 	// 组合年报提示词并调用模型生成「正文 + 结构化摘要」
-	prompt := buildYearPrompt(report.StartDate, report.EndDate, materials)
-	content, abstract, err := s.callModel(ctx, prompt)
+	userPrompt := buildYearPrompt(report.StartDate, report.EndDate, materials)
+	systemPrompt := s.pickSystemPrompt(string(v1.ReportPeriodYear), string(v1.ReportTemplateFormal), nil)
+	content, abstract, err := s.callModel(ctx, systemPrompt, userPrompt)
 	if err != nil {
 		if updateErr := s.reportRepo.UpdateFailed(ctx, report.ReportID, genVersion, "生成失败"); updateErr != nil {
 			s.logger.Error("mark report failed status error", zap.String("report_id", report.ReportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
@@ -434,11 +441,11 @@ func (s *reportService) processYearReport(ctx context.Context, report *model.Rep
 	return nil
 }
 
-func (s *reportService) callModel(ctx context.Context, prompt string) (string, string, error) {
+func (s *reportService) callModel(ctx context.Context, systemPrompt string, userPrompt string) (string, string, error) {
 	if s.openAIClient == nil {
 		return "", "", errors.New("llm client not initialized")
 	}
-	return s.openAIClient.GenerateReport(ctx, prompt)
+	return s.openAIClient.GenerateReport(ctx, systemPrompt, userPrompt)
 }
 
 func (s *reportService) toReportItem(report *model.Report) v1.ReportItem {
@@ -527,11 +534,21 @@ func pickAbstract(report *model.Report) string {
 
 func buildYearPrompt(start string, end string, materials []monthMaterial) string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("请基于以下 %s 至 %s 的月度摘要，生成一份结构化的年终报告，突出产出、问题、关键里程碑和下一年度规划。", start, end))
-	builder.WriteString("\n\n")
+	builder.WriteString(fmt.Sprintf("类型：年报\n"))
+	builder.WriteString(fmt.Sprintf("开始日期：%s\n", start))
+	builder.WriteString(fmt.Sprintf("结束日期：%s\n\n", end))
+	builder.WriteString("记录列表：\n")
 	for _, m := range materials {
-		builder.WriteString(m.text)
-		builder.WriteString("\n\n")
+		builder.WriteString(fmt.Sprintf("- 月份：%s\n", m.monthLabel))
+		lines := strings.Split(m.text, "\n")
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			builder.WriteString(fmt.Sprintf("  - %s\n", trimmed))
+		}
+		builder.WriteString("\n")
 	}
 	return builder.String()
 }
@@ -567,25 +584,89 @@ func toZhDate(date string) string {
 	return t.Format("2006年01月02日")
 }
 
-func buildPrompt(periodType string, template string, settings *model.UserSettings, records []v1.RecordItem) string {
-	_ = template
-	preset := ""
+func (s *reportService) buildUserPrompt(periodType string, template string, settings *model.UserSettings, records []v1.RecordItem, title string) reportPrompt {
+	systemPrompt := s.pickSystemPrompt(periodType, template, settings)
+
+	builder := strings.Builder{}
+	builder.WriteString("生成类型：")
+	switch v1.ReportPeriodType(periodType) {
+	case v1.ReportPeriodWeek:
+		builder.WriteString("周报")
+	case v1.ReportPeriodMonth:
+		builder.WriteString("月报")
+	case v1.ReportPeriodYear:
+		builder.WriteString("年终总结")
+	}
+	builder.WriteString("\n")
+	builder.WriteString("标题：")
+	builder.WriteString(title)
+	builder.WriteString("\n")
+	builder.WriteString("记录列表：\n")
+
+	if len(records) == 0 {
+		builder.WriteString("- 日期：无\n  内容：无记录\n")
+	} else {
+		for _, r := range records {
+			builder.WriteString(fmt.Sprintf("- 日期：%s\n", r.Date))
+			builder.WriteString("  内容：\n")
+			lines := strings.Split(r.Content, "\n")
+			empty := true
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if trimmed == "" {
+					continue
+				}
+				builder.WriteString(fmt.Sprintf("  - %s\n", trimmed))
+				empty = false
+			}
+			if empty {
+				builder.WriteString("  - 无记录\n")
+			}
+		}
+	}
+
+	return reportPrompt{
+		system: systemPrompt,
+		user:   builder.String(),
+	}
+}
+
+func (s *reportService) pickSystemPrompt(periodType string, template string, settings *model.UserSettings) string {
+	// 用户自定义系统 prompt 优先
 	if settings != nil {
-		if v1.ReportPeriodType(periodType) == v1.ReportPeriodWeek {
-			preset = settings.ReportTemplateWeek
+		if v1.ReportPeriodType(periodType) == v1.ReportPeriodWeek && settings.ReportTemplateWeek != "" {
+			return s.enforceMarkdownSystemPrompt(settings.ReportTemplateWeek)
 		}
-		if v1.ReportPeriodType(periodType) == v1.ReportPeriodMonth {
-			preset = settings.ReportTemplateMonth
+		if v1.ReportPeriodType(periodType) == v1.ReportPeriodMonth && settings.ReportTemplateMonth != "" {
+			return s.enforceMarkdownSystemPrompt(settings.ReportTemplateMonth)
 		}
 	}
 
-	logText := ""
-	for _, record := range records {
-		logText += fmt.Sprintf("日期：%s\n内容：\n%s\n\n", record.Date, record.Content)
+	// 默认模板：按报告版式选择
+	switch v1.ReportTemplateType(template) {
+	case v1.ReportTemplateSimple:
+		if s.promptSet.Simple != "" {
+			return s.enforceMarkdownSystemPrompt(s.promptSet.Simple)
+		}
+	case v1.ReportTemplateFormal:
+		if s.promptSet.Formal != "" {
+			return s.enforceMarkdownSystemPrompt(s.promptSet.Formal)
+		}
+	default:
+		if s.promptSet.Formal != "" {
+			return s.enforceMarkdownSystemPrompt(s.promptSet.Formal)
+		}
+	}
+	// 兜底
+	return s.enforceMarkdownSystemPrompt("你是工作报告助手，突出关键产出、风险和计划，不要编造。")
+}
+
+func (s *reportService) enforceMarkdownSystemPrompt(base string) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = "你是工作报告助手，突出关键产出、风险和计划，不要编造。"
 	}
 
-	if preset == "" {
-		preset = "请根据以下工作日志生成一份结构清晰的工作报告，重点突出产出、问题与下一步计划。"
-	}
-	return preset + "\n\n" + logText
+	const suffix = "强制要求：\n1. 仅输出 Markdown 原文，不要使用```代码块包裹。\n2. 不要输出 HTML 标签，不要输出 JSON。\n3. 不要输出任何解释性文字，只输出最终报告内容。"
+	return base + "\n\n" + suffix
 }

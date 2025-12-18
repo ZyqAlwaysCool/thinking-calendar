@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast'
 
 const LoginPage = () => {
   const router = useRouter()
-  const { login, loading } = useAuthStore()
+  const { login, loading, user, restoreSession, initializing } = useAuthStore()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -19,6 +19,16 @@ const LoginPage = () => {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    void restoreSession()
+  }, [restoreSession])
+
+  useEffect(() => {
+    if (!initializing && user) {
+      router.replace('/today')
+    }
+  }, [user, router, initializing])
 
   const handleLogin = async () => {
     const trimmedUsername = username.trim()
@@ -35,11 +45,15 @@ const LoginPage = () => {
       toast.error(PAGE_TEXT.loginPasswordLength)
       return
     }
-    await login({ username: trimmedUsername, password: trimmedPassword })
-    router.push('/today')
+    try {
+      await login({ username: trimmedUsername, password: trimmedPassword })
+      router.push('/today')
+    } catch {
+      // 已有提示
+    }
   }
 
-  if (!mounted) {
+  if (!mounted || initializing) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 bg-gray-50 dark:bg-gray-900">
         <div className="w-full max-w-[400px] rounded-3xl border border-gray-200 bg-gray-100 p-12 shadow-card dark:border-gray-800 dark:bg-gray-900 transition-all duration-200 hover:scale-[1.02] hover:shadow-md">

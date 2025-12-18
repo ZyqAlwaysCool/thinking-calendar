@@ -16,7 +16,7 @@ const UserMenu = () => {
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const [open, setOpen] = useState(false)
-  const name = user?.name || PAGE_TEXT.userMenuGuest
+  const name = user?.username || PAGE_TEXT.userMenuGuest
   const short = name.slice(0, 1).toUpperCase()
 
   const handleLogout = () => {
@@ -58,14 +58,38 @@ export const PageShell = ({ children }: Props) => (
 
 const ProtectedShell = ({ children }: Props) => {
   const router = useRouter()
-  const { user } = useAuthStore()
+  const { user, initializing, restoreSession, logout, refreshToken, username, password } = useAuthStore()
 
   useEffect(() => {
-    if (!user) {
+    void restoreSession()
+  }, [restoreSession])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = () => {
+      if (!username || !password) {
+        logout()
+        router.replace('/')
+        return
+      }
+      void refreshToken()
+    }
+    window.addEventListener('auth:unauthorized', handler)
+    return () => {
+      window.removeEventListener('auth:unauthorized', handler)
+    }
+  }, [logout, router, refreshToken, username, password])
+
+  useEffect(() => {
+    if (!initializing && !user) {
       toast.error(PAGE_TEXT.loginAuthRequired)
       router.replace('/')
     }
-  }, [user, router])
+  }, [user, router, initializing])
+
+  if (initializing) {
+    return null
+  }
 
   if (!user) {
     return null

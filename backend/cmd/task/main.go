@@ -2,7 +2,7 @@
  * @Author: zyq
  * @Date: 2025-12-17 20:12:08
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 21:32:36
+ * @LastEditTime: 2025-12-18 10:36:48
  * @FilePath: /thinking-calendar/backend/cmd/task/main.go
  * @Description:
  *
@@ -16,6 +16,7 @@ import (
 	"backend/pkg/log"
 	"context"
 	"flag"
+	"os"
 )
 
 func main() {
@@ -23,11 +24,11 @@ func main() {
 	flag.Parse()
 	conf := config.NewConfig(*envConf)
 
-	// apiKey := os.Getenv("MODEL_API_KEY")
-	// if apiKey == "" {
-	// 	panic("MODEL_API_KEY 未配置，禁止启动服务")
-	// }
-	// conf.Set("llm.openai.api_key", apiKey)
+	apiKey := os.Getenv("MODEL_API_KEY")
+	if apiKey == "" {
+		panic("MODEL_API_KEY 未配置，禁止启动服务")
+	}
+	conf.Set("llm.openai.api_key", apiKey)
 
 	logger := log.NewLog(conf)
 	logger.Info("task start")

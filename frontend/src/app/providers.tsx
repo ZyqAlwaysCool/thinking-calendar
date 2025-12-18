@@ -2,7 +2,6 @@
 
 import { ReactNode, useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
-import { MswProvider } from '@/components/msw-provider'
 
 type Props = {
   children: ReactNode
@@ -21,7 +20,6 @@ export const Providers = ({ children }: Props) => {
 
   return (
     <>
-      <MswProvider />
       {children}
       <Toaster position="top-center" />
     </>

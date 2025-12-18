@@ -1,7 +1,9 @@
 export type User = {
-  id: string
-  name: string
-  email: string
+  userId: string
+  username: string
+  avatar?: string
+  isValid: boolean
+  lastLoginAt: string
 }
 
 export type Log = {
@@ -9,7 +11,7 @@ export type Log = {
   date: string
   content: string
   updatedAt: string
-  count: number
+  version: number
 }
 
 export type ReportPeriod = 'week' | 'month' | 'year'
@@ -23,6 +25,10 @@ export type Report = {
   content: string
   confirmed: boolean
   createdAt: string
+  updatedAt: string
+  status: 'queued' | 'processing' | 'ready' | 'failed'
+  template: 'formal' | 'simple'
+  failedReason?: string
 }
 
 export type ApiResponse<T> = {
@@ -36,14 +42,34 @@ export type GenerateReportPayload = {
   startDate: string
   endDate: string
   template: 'formal' | 'simple'
-  replaceId?: string
 }
 
 export type SaveLogPayload = {
   date: string
   content: string
+  meta?: Record<string, unknown>
 }
 
 export type ConfirmReportPayload = {
-  id: string
+  reportId: string
+  content?: string
+}
+
+export type LoginRespData = {
+  access_token?: string
+  expire_at?: string
+  accessToken?: string
+  expireAt?: string
+}
+
+export type MonthDay = {
+  date: string
+  hasRecord: boolean
+}
+
+export type MonthDashboard = {
+  recordedDays: number
+  missingDays: number
+  rate: number
+  days: MonthDay[]
 }

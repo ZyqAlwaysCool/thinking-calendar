@@ -1,9 +1,25 @@
 import { create } from 'zustand'
 import { toast } from 'react-hot-toast'
-import { api } from '@/lib/api'
+import { api, extractErrorMessage } from '@/lib/api'
 import { PAGE_TEXT } from '@/lib/constants'
 import { type ApiResponse, type Log, type SaveLogPayload } from '@/types'
-import { waitForMock } from '@/mock/wait-mock'
+import { normalizeMarkdown } from '@/lib/markdown'
+
+type RecordResp = {
+  record_id: string
+  date: string
+  content: string
+  updatedAt: string
+  version: number
+}
+
+const mapRecord = (item: RecordResp): Log => ({
+  id: item.record_id,
+  date: item.date,
+  content: normalizeMarkdown(item.content),
+  updatedAt: item.updatedAt || new Date().toISOString(),
+  version: item.version ?? 0
+})
 
 type LogState = {
   logs: Log[]
@@ -23,41 +39,39 @@ export const useLogStore = create<LogState>((set, get) => ({
   fetchLogs: async () => {
     set({ loading: true })
     try {
-      await waitForMock()
-      const res = await api.get<ApiResponse<Log[]>>('/logs')
-      set({ logs: res.data.data, loading: false })
+      const res = await api.get<ApiResponse<RecordResp[]>>('/records')
+      const mapped = (res.data.data || []).map(mapRecord)
+      set({ logs: mapped, loading: false })
     } catch (error) {
       set({ loading: false })
-      toast.error(PAGE_TEXT.loadFail)
+      toast.error(extractErrorMessage(error, PAGE_TEXT.loadFail))
       throw error
     }
   },
   fetchLogByDate: async (date: string) => {
     set({ loading: true })
     try {
-      await waitForMock()
-      const res = await api.get<ApiResponse<Log | null>>('/logs', { params: { date } })
-      const found = res.data.data
+      const res = await api.get<ApiResponse<RecordResp | null>>('/records', { params: { date } })
+      const found = res.data.data ? mapRecord(res.data.data) : null
       const fallback: Log = {
         id: '',
         date,
         content: '',
         updatedAt: new Date().toISOString(),
-        count: 0
+        version: 0
       }
       set({ currentLog: found ?? fallback, loading: false })
     } catch (error) {
       set({ loading: false })
-      toast.error(PAGE_TEXT.loadFail)
+      toast.error(extractErrorMessage(error, PAGE_TEXT.loadFail))
       throw error
     }
   },
   saveLog: async (payload: SaveLogPayload) => {
     set({ saving: true })
     try {
-      await waitForMock()
-      const res = await api.post<ApiResponse<Log>>('/logs', payload)
-      const saved = res.data.data
+      const res = await api.post<ApiResponse<RecordResp>>('/records', payload)
+      const saved = mapRecord(res.data.data)
       const existed = get().logs.some(item => item.date === saved.date)
       set({
         logs: existed ? get().logs.map(item => (item.date === saved.date ? saved : item)) : [...get().logs, saved],
@@ -67,7 +81,7 @@ export const useLogStore = create<LogState>((set, get) => ({
       toast.success(PAGE_TEXT.saveSuccess)
     } catch (error) {
       set({ saving: false })
-      toast.error(PAGE_TEXT.saveFail)
+      toast.error(extractErrorMessage(error, PAGE_TEXT.saveFail))
       throw error
     }
   }

@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Editor } from '@/components/editor'
 import { NAV_LABELS, PAGE_TEXT, REPORT_OPTIONS } from '@/lib/constants'
-import { formatDateLabel, formatDateTime, formatRangeLabel } from '@/lib/utils'
+import { formatDateTime, formatRangeLabel } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import { useReportStore } from '@/stores/use-report-store'
 import { type GenerateReportPayload, type Report } from '@/types'
@@ -49,7 +49,6 @@ const ReportsPage = () => {
   })
   const [rangeAnchor, setRangeAnchor] = useState(today)
   const [lastGeneratedKey, setLastGeneratedKey] = useState<string | null>(null)
-  const [lastGeneratedReportId, setLastGeneratedReportId] = useState<string | null>(null)
   const [typing, setTyping] = useState(false)
   const typingTimer = useRef<NodeJS.Timeout | null>(null)
 
@@ -76,14 +75,14 @@ const ReportsPage = () => {
   }, [sortedReports])
 
   const rangeLabel = formatRangeLabel(form.startDate, form.endDate)
-  const hasConfirmedBase = reports.some(item => item.confirmed && item.period !== 'year')
   const currentKey = useMemo(() => `${form.period}|${form.template}|${form.startDate}|${form.endDate}`, [form])
   const matchSelected =
     selectedReport &&
     selectedReport.period === form.period &&
     selectedReport.startDate === form.startDate &&
-    selectedReport.endDate === form.endDate
-  const isRegenerate = (currentKey === lastGeneratedKey && !!lastGeneratedReportId) || !!matchSelected
+    selectedReport.endDate === form.endDate &&
+    selectedReport.template === form.template
+  const isRegenerate = currentKey === lastGeneratedKey || !!matchSelected
 
   const startTyping = (content: string) => {
     if (typingTimer.current) {
@@ -121,21 +120,10 @@ const ReportsPage = () => {
 
   const handleGenerate = async () => {
     try {
-      const sameRange = reports.find(
-        item => item.period === form.period && item.startDate === form.startDate && item.endDate === form.endDate
-      )
-      const replaceId = matchSelected ? selectedReport?.id : sameRange?.id ?? (isRegenerate ? lastGeneratedReportId : null)
-      if (replaceId) {
-        const updated = await generateReport(form, { replaceId })
-        setSelectedReport(updated)
-        startTyping(updated.content)
-        setLastGeneratedReportId(updated.id)
-      } else {
-        const created = await generateReport(form)
-        setSelectedReport(created)
-        startTyping(created.content)
-        setLastGeneratedReportId(created.id)
-      }
+      const created = await generateReport(form)
+      setSelectedReport(created)
+      setRangeAnchor(created.startDate)
+      startTyping(created.content)
       setLastGeneratedKey(currentKey)
     } catch {
       // 已有提示
@@ -145,8 +133,8 @@ const ReportsPage = () => {
   const handleConfirm = async () => {
     if (!selectedReport) return
     try {
-      await confirmReport(selectedReport.id)
-      setSelectedReport({ ...selectedReport, confirmed: true })
+      const updated = await confirmReport({ id: selectedReport.id, content: editorContent })
+      setSelectedReport(updated)
     } catch {
       // 已有提示
     }
@@ -183,11 +171,11 @@ const ReportsPage = () => {
       ...prev,
       period: report.period,
       startDate: report.startDate,
-      endDate: report.endDate
+      endDate: report.endDate,
+      template: report.template
     }))
     const nextKey = `${report.period}|${form.template}|${report.startDate}|${report.endDate}`
     setLastGeneratedKey(nextKey)
-    setLastGeneratedReportId(report.id)
   }
 
   const onChangeForm = (key: keyof GenerateReportPayload, value: string) => {
@@ -250,7 +238,9 @@ const ReportsPage = () => {
                           </span>
                         </div>
                         <div className="text-xs text-gray-300 dark:text-gray-300">{formatRangeLabel(item.startDate, item.endDate)}</div>
-                        <div className="text-xs text-gray-300 dark:text-gray-300">{`${PAGE_TEXT.lastUpdatedRecent}：${formatDateTime(item.createdAt)}`}</div>
+                        <div className="text-xs text-gray-300 dark:text-gray-300">
+                          {`${PAGE_TEXT.lastUpdatedRecent}：${formatDateTime(item.updatedAt || item.createdAt)}`}
+                        </div>
                       </Card>
                     ))}
                   </AccordionContent>
@@ -277,7 +267,9 @@ const ReportsPage = () => {
                           </span>
                         </div>
                         <div className="text-xs text-gray-300 dark:text-gray-300">{formatRangeLabel(item.startDate, item.endDate)}</div>
-                        <div className="text-xs text-gray-300 dark:text-gray-300">{`${PAGE_TEXT.lastUpdatedRecent}：${formatDateTime(item.createdAt)}`}</div>
+                        <div className="text-xs text-gray-300 dark:text-gray-300">
+                          {`${PAGE_TEXT.lastUpdatedRecent}：${formatDateTime(item.updatedAt || item.createdAt)}`}
+                        </div>
                       </Card>
                     ))}
                   </AccordionContent>
@@ -304,7 +296,9 @@ const ReportsPage = () => {
                           </span>
                         </div>
                         <div className="text-xs text-gray-300 dark:text-gray-300">{formatRangeLabel(item.startDate, item.endDate)}</div>
-                        <div className="text-xs text-gray-300 dark:text-gray-300">{`${PAGE_TEXT.lastUpdatedRecent}：${formatDateTime(item.createdAt)}`}</div>
+                        <div className="text-xs text-gray-300 dark:text-gray-300">
+                          {`${PAGE_TEXT.lastUpdatedRecent}：${formatDateTime(item.updatedAt || item.createdAt)}`}
+                        </div>
                       </Card>
                     ))}
                   </AccordionContent>
@@ -370,7 +364,7 @@ const ReportsPage = () => {
                     {generating || typing ? PAGE_TEXT.generating : isRegenerate ? PAGE_TEXT.generateAgain : PAGE_TEXT.generateNow}
                   </Button>
                   {(generating || typing) && (
-                    <div className="text-sm text-gray-400 dark:text-gray-500">AI 正在生成，稍候即会出现内容</div>
+                    <div className="text-sm text-gray-400 dark:text-gray-500">{PAGE_TEXT.reportGeneratingHint}</div>
                   )}
                   <Button variant="outline" size="lg" className="flex items-center gap-2">
                     {PAGE_TEXT.exportBatch}
@@ -407,7 +401,7 @@ const ReportsPage = () => {
                   <Button variant="outline" onClick={handleExport}>
                     {PAGE_TEXT.exportReport}
                   </Button>
-                  <Button onClick={handleConfirm} disabled={!selectedReport || selectedReport.confirmed}>
+                  <Button onClick={handleConfirm} disabled={!selectedReport || selectedReport.confirmed || selectedReport.status !== 'ready'}>
                     {selectedReport?.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.confirmReport}
                   </Button>
                 </div>

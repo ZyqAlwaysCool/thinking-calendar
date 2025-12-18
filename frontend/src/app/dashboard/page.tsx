@@ -8,20 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton'
 import { Editor } from '@/components/editor'
 import { Button } from '@/components/ui/button'
-import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
+import { DIALOG_TEXT, PAGE_TEXT } from '@/lib/constants'
 import { formatDateLabel } from '@/lib/utils'
 import { useLogStore } from '@/stores/use-log-store'
+import { useDashboardStore } from '@/stores/use-dashboard-store'
 import { toast } from 'react-hot-toast'
 
 const DashboardPage = () => {
-  const { logs, fetchLogs, fetchLogByDate, currentLog, saveLog, loading, saving } = useLogStore()
+  const { fetchLogByDate, currentLog, saveLog, saving } = useLogStore()
+  const { data: dashboard, fetchMonth, loading } = useDashboardStore()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const now = useMemo(() => new Date(), [])
 
   useEffect(() => {
-    void fetchLogs().catch(() => {})
-  }, [fetchLogs])
+    const month = format(new Date(), 'yyyy-MM')
+    void fetchMonth(month).catch(() => {})
+  }, [fetchMonth])
 
   useEffect(() => {
     if (currentLog && open) {
@@ -29,7 +33,6 @@ const DashboardPage = () => {
     }
   }, [currentLog, open])
 
-  const now = new Date()
   const monthLabel = format(now, 'yyyy年MM月')
 
   const monthDays = useMemo(() => {
@@ -40,14 +43,13 @@ const DashboardPage = () => {
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [now])
 
-  const recordedSet = useMemo(() => new Set(logs.map(item => item.date)), [logs])
-  const currentMonthDays = useMemo(
-    () => eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) }),
-    [now]
+  const recordedSet = useMemo(
+    () => new Set((dashboard?.days || []).filter(day => day.hasRecord).map(day => day.date)),
+    [dashboard]
   )
-  const recordedCount = currentMonthDays.filter(day => recordedSet.has(format(day, 'yyyy-MM-dd'))).length
-  const missingCount = currentMonthDays.length - recordedCount
-  const rate = currentMonthDays.length === 0 ? 0 : Math.round((recordedCount / currentMonthDays.length) * 100)
+  const recordedCount = dashboard?.recordedDays ?? 0
+  const missingCount = dashboard?.missingDays ?? 0
+  const rate = dashboard?.rate ?? 0
 
   const openDialog = async (day: Date) => {
     if (isAfter(day, new Date())) {
@@ -68,7 +70,8 @@ const DashboardPage = () => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd')
     try {
       await saveLog({ date: dateStr, content: draft })
-      await fetchLogs()
+      const month = format(new Date(), 'yyyy-MM')
+      await fetchMonth(month)
       setOpen(false)
     } catch {
       // 已有提示
@@ -95,19 +98,27 @@ const DashboardPage = () => {
                 const isRecorded = recordedSet.has(dateStr)
                 const isToday = isSameDay(day, now)
                 const inMonth = isSameMonth(day, now)
+                const isFuture = isAfter(day, now)
+                const colorClass = isFuture
+                  ? 'border-gray-200 bg-gray-100 text-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-600'
+                  : isRecorded
+                    ? 'border-gray-900 bg-gray-800 text-gray-50'
+                    : 'border-gray-200 bg-gray-100 text-gray-700 dark:border-gray-800 dark:bg-gray-900'
+                const stateClass = isFuture
+                  ? 'cursor-not-allowed'
+                  : 'hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-100 dark:hover:text-red-700 hover:shadow-md'
+                const dimClass = !inMonth ? 'opacity-40' : ''
+                const todayClass = isToday ? 'border-4' : ''
                 return (
                   <button
                     key={dateStr}
                     type="button"
                     onClick={() => openDialog(day)}
-                    className={`flex h-20 flex-col items-center justify-center rounded-lg border text-sm transition-all duration-200 hover:shadow-md ${
-                      isRecorded
-                        ? 'border-gray-900 bg-gray-800 text-gray-50'
-                        : 'border-gray-200 bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-red-100 dark:hover:text-red-700'
-                    } ${!inMonth ? 'opacity-40' : ''} ${isToday ? 'border-4' : ''}`}
+                    disabled={isFuture}
+                    className={`flex flex-col items-center justify-center rounded-lg border h-20 text-sm ${colorClass} ${stateClass} ${dimClass} ${todayClass} transition-all duration-200`}
                   >
                     <span className="text-lg font-semibold">{day.getDate()}</span>
-                    {!isRecorded && <span className="text-xs">{PAGE_TEXT.missingFill}</span>}
+                    {!isRecorded && !isFuture && <span className="text-xs">{PAGE_TEXT.missingFill}</span>}
                     {isRecorded && <span className="text-xs text-gray-200 dark:text-gray-300">{PAGE_TEXT.recordedTag}</span>}
                   </button>
                 )

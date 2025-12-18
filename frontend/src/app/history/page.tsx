@@ -14,6 +14,7 @@ import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { cn, formatDateLabel, formatShortDate, formatTime } from '@/lib/utils'
 import { useLogStore } from '@/stores/use-log-store'
 import { toast } from 'react-hot-toast'
+import ReactMarkdown from 'react-markdown'
 
 const HistoryPage = () => {
   const { logs, fetchLogs, currentLog, fetchLogByDate, saveLog, loading, saving } = useLogStore()
@@ -142,12 +143,9 @@ const HistoryPage = () => {
                     <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">{formatDateLabel(item.date)}</div>
                     <div className="text-sm text-gray-300 dark:text-gray-300">{formatShortDate(item.date)}</div>
                   </div>
-                  <div
-                    className="text-sm text-gray-700 dark:text-gray-200"
-                    dangerouslySetInnerHTML={{
-                      __html: item.content.includes('<') ? item.content : item.content.replace(/\n/g, '<br />')
-                    }}
-                  />
+                  <div className="prose prose-gray max-w-none text-sm dark:prose-invert">
+                    <ReactMarkdown>{item.content || PAGE_TEXT.emptyLog}</ReactMarkdown>
+                  </div>
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-gray-300 dark:text-gray-300">
                       {`${formatTime(item.updatedAt)} ${PAGE_TEXT.lastUpdated}`}

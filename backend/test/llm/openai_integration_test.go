@@ -47,7 +47,7 @@ func TestOpenAIClient_Integration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	content, abstract, err := client.GenerateReport(ctx, "用一句话返回一段测试内容，并生成摘要。正文用中文。")
+	content, abstract, err := client.GenerateReport(ctx, "你是测试助手，仅输出一段中文文本。", "请输出一句中文作为测试正文。")
 	if err != nil {
 		t.Fatalf("调用大模型失败: %v", err)
 	}

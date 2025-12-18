@@ -3,8 +3,16 @@ import { format, getISOWeek, parseISO } from 'date-fns'
 import raw from './data.json'
 import { type ApiResponse, type Log, type Report } from '@/types'
 
-let logs: Log[] = [...raw.logs]
-let reports: Report[] = [...raw.reports]
+let logs: Log[] = raw.logs.map((item) => ({
+  ...item,
+  version: item.version ?? 1
+}))
+let reports: Report[] = raw.reports.map((item) => ({
+  ...item,
+  status: item.status ?? 'ready',
+  template: item.template ?? 'formal',
+  updatedAt: item.updatedAt ?? item.createdAt
+}))
 
 export const handlers = [
   rest.get('/api/logs', (req, res, ctx) => {
@@ -25,7 +33,7 @@ export const handlers = [
     if (existing) {
       existing.content = content
       existing.updatedAt = now.toISOString()
-      existing.count = Math.max(1, content.split('\\n').length)
+      existing.version = existing.version + 1
       const response: ApiResponse<Log> = { code: 0, msg: 'success', data: existing }
       return res(ctx.status(200), ctx.json(response))
     }
@@ -34,7 +42,7 @@ export const handlers = [
       date,
       content,
       updatedAt: now.toISOString(),
-      count: Math.max(1, content.split('\\n').length)
+      version: 1
     }
     logs = [...logs, created]
     const response: ApiResponse<Log> = { code: 0, msg: 'success', data: created }
@@ -85,7 +93,10 @@ export const handlers = [
       title,
       content,
       confirmed: replaceId ? false : existing?.confirmed ?? false,
-      createdAt
+      createdAt,
+      updatedAt: now.toISOString(),
+      status: 'ready',
+      template
     }
     if (existing) {
       reports = reports.map(item => (item.id === finalId ? created : item))
