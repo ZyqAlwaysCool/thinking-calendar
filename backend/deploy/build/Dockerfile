@@ -1,34 +1,32 @@
-ARG REGISTRY=docker.io
-FROM ${REGISTRY}/golang:1.19-alpine AS builder
+ARG REGISTRY=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library
+FROM ${REGISTRY}/golang:1.24.9-alpine AS builder
 RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 
-ARG APP_RELATIVE_PATH
-
-COPY .. /data/app
 WORKDIR /data/app
+COPY .. /data/app
+
+ENV GOPROXY=https://goproxy.cn,direct
+ENV CGO_ENABLED=0
 
 RUN rm -rf /data/app/bin/
-RUN export GOPROXY=https://goproxy.cn,direct && go mod tidy && go build -ldflags="-s -w" -o ./bin/server ${APP_RELATIVE_PATH}
+RUN go mod download
+RUN go build -ldflags="-s -w" -o ./bin/server ./cmd/server
+RUN go build -ldflags="-s -w" -o ./bin/migrate ./cmd/migration
+RUN go build -ldflags="-s -w" -o ./bin/task ./cmd/task
 RUN mv config /data/app/bin/
 
-
-FROM ${REGISTRY}/alpine:3.16
+FROM ${REGISTRY}/alpine:3.18
 RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
-
 
 RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
     && apk del tzdata
 
-
-ARG APP_ENV
+ARG APP_ENV=prod
 ENV APP_ENV=${APP_ENV}
 
 WORKDIR /data/app
 COPY --from=builder /data/app/bin /data/app
 
-EXPOSE 8000
+EXPOSE 8998
 ENTRYPOINT [ "./server" ]
-
-#docker build -t  1.1.1.1:5000/demo-api:v1 --build-arg APP_CONF=config/prod.yml --build-arg  APP_RELATIVE_PATH=./cmd/server/...  .
-#docker run -it --rm --entrypoint=ash 1.1.1.1:5000/demo-api:v1

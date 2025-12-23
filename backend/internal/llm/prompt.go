@@ -2,6 +2,7 @@ package llm
 
 import (
 	"backend/pkg/log"
+	"embed"
 	"os"
 	"path/filepath"
 
@@ -13,6 +14,9 @@ type PromptSet struct {
 	Simple string
 }
 
+//go:embed formal_prompt.md simple_prompt.md
+var promptFS embed.FS
+
 // LoadPrompts 从 internal/llm 目录加载默认模板
 func LoadPrompts(logger *log.Logger) PromptSet {
 	baseDir, err := os.Getwd()
@@ -23,6 +27,10 @@ func LoadPrompts(logger *log.Logger) PromptSet {
 
 	dir := filepath.Join(baseDir, "internal", "llm")
 	read := func(name string) string {
+		// 优先使用内嵌提示词，读取失败时退回磁盘文件，避免容器路径差异
+		if b, err := promptFS.ReadFile(name); err == nil {
+			return string(b)
+		}
 		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			logger.Error("read prompt failed", zap.String("file", name), zap.String("err", err.Error()))

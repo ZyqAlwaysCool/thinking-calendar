@@ -1,6 +1,8 @@
 module backend
 
-go 1.24.10
+go 1.24.0
+
+toolchain go1.24.6
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2

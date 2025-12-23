@@ -1,0 +1,40 @@
+ARG NODE_IMAGE=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:20-alpine
+ARG BACKEND_BASE=http://backend:8000/v1
+ARG NEXT_PUBLIC_API_BASE_URL=/api
+ARG NEXT_PUBLIC_API_MOCKING=disabled
+
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY package*.json ./
+RUN npm ci
+
+FROM ${NODE_IMAGE} AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG BACKEND_BASE
+ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_API_MOCKING
+ENV BACKEND_BASE=${BACKEND_BASE}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_API_MOCKING=${NEXT_PUBLIC_API_MOCKING}
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM ${NODE_IMAGE} AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG BACKEND_BASE
+ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_API_MOCKING
+ENV BACKEND_BASE=${BACKEND_BASE}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_API_MOCKING=${NEXT_PUBLIC_API_MOCKING}
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+EXPOSE 3000
+CMD ["npm", "run", "start"]

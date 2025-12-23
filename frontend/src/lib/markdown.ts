@@ -1,3 +1,5 @@
+const toSafeString = (value?: string) => (typeof value === 'string' ? value : '')
+
 const escapeHtml = (text: string) =>
   text
     .replaceAll('&', '&amp;')
@@ -14,23 +16,25 @@ const renderInline = (text: string) => {
 }
 
 const looksLikeHtml = (value: string) => {
-  const trimmed = value.trim()
+  const trimmed = toSafeString(value).trim()
   if (!trimmed) return false
   return /^<\/?[a-z][\s\S]*>$/i.test(trimmed)
 }
 
-export const normalizeRichText = (value: string) => {
-  if (looksLikeHtml(value)) return value
-  return markdownToHtml(value)
+export const normalizeRichText = (value?: string) => {
+  const safe = toSafeString(value)
+  if (looksLikeHtml(safe)) return safe
+  return markdownToHtml(safe)
 }
 
-export const normalizeMarkdown = (value: string) => {
-  if (looksLikeHtml(value)) return htmlToMarkdown(value)
-  return value
+export const normalizeMarkdown = (value?: string) => {
+  const safe = toSafeString(value)
+  if (looksLikeHtml(safe)) return htmlToMarkdown(safe)
+  return safe
 }
 
 export const markdownToHtml = (markdown: string) => {
-  const lines = markdown.replaceAll('\r\n', '\n').split('\n')
+  const lines = toSafeString(markdown).replaceAll('\r\n', '\n').split('\n')
   const html: string[] = []
   let inUl = false
   let inOl = false

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO, isSameMonth, isAfter } from 'date-fns'
-import { type DayProps } from 'react-day-picker'
+import { type DayContentProps } from 'react-day-picker'
 import { PageShell } from '@/components/page-shell'
 import { Calendar } from '@/components/ui/calendar'
 import { Card } from '@/components/ui/card'
@@ -112,25 +112,13 @@ const HistoryPage = () => {
               onMonthChange={(m) => setDisplayMonth(m ?? new Date())}
               onSelect={handleSelect}
               components={{
-                Day: (dayProps: DayProps) => {
-                  const day = dayProps.date
-                  const hasLog = logMap.has(format(day, 'yyyy-MM-dd'))
+                DayContent: ({ date }: DayContentProps) => {
+                  const hasLog = logMap.has(format(date, 'yyyy-MM-dd'))
                   return (
-                    <button
-                      {...dayProps}
-                      onClick={(e) => {
-                        dayProps.onClick?.(e)
-                        void handleSelect(day)
-                      }}
-                      className={cn(
-                        'relative flex h-10 w-10 items-center justify-center rounded-lg text-sm text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
-                        dayProps.className
-                      )}
-                      type="button"
-                    >
-                      {day.getDate()}
+                    <div className="relative flex h-10 w-10 items-center justify-center">
+                      <span>{date.getDate()}</span>
                       {hasLog && <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-gray-800 dark:bg-gray-100" />}
-                    </button>
+                    </div>
                   )
                 }
               }}

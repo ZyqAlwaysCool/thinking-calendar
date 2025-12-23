@@ -3,11 +3,17 @@ import { format, getISOWeek, parseISO } from 'date-fns'
 import raw from './data.json'
 import { type ApiResponse, type Log, type Report } from '@/types'
 
-let logs: Log[] = raw.logs.map((item) => ({
+type RawLog = Log & { count?: number; version?: number }
+type RawReport = Report & { updatedAt?: string }
+
+const rawLogs = (raw.logs as RawLog[]) || []
+const rawReports = (raw.reports as RawReport[]) || []
+
+let logs: Log[] = rawLogs.map((item) => ({
   ...item,
-  version: item.version ?? 1
+  version: item.version ?? item.count ?? 1
 }))
-let reports: Report[] = raw.reports.map((item) => ({
+let reports: Report[] = rawReports.map((item) => ({
   ...item,
   status: item.status ?? 'ready',
   template: item.template ?? 'formal',
