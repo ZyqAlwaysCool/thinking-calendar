@@ -55,6 +55,7 @@ services:
       - MODEL_API_KEY=${MODEL_API_KEY}
       - APP_CONF=config/prod.yml
       - APP_ENV=prod
+      - LOG_FILE_NAME=./storage/task-logs/task.log
     depends_on:
       mysql:
         condition: service_healthy
@@ -62,6 +63,8 @@ services:
         condition: service_completed_successfully
     entrypoint: ["./task"]
     command: ["-conf", "config/prod.yml"]
+    volumes:
+      - ./deploy_docker/backend/task-logs:/data/app/storage/task-logs
     restart: unless-stopped
 
   backend:
@@ -72,7 +75,7 @@ services:
       args:
         APP_ENV: prod
     environment:
-      - MODEL_API_KEY={MODEL_API_KEY}
+      - MODEL_API_KEY=${MODEL_API_KEY}
       - APP_CONF=config/prod.yml
       - APP_ENV=prod
     depends_on:

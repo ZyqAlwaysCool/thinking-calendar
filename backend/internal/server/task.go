@@ -44,9 +44,11 @@ func (t *TaskServer) Start(ctx context.Context) error {
 		t.log.Error("start report task failed", zap.Error(err))
 	}
 
-	// t.scheduler = gocron.NewScheduler(time.UTC)
-	// if you are in China, you will need to change the time zone as follows
-	t.scheduler = gocron.NewScheduler(time.FixedZone("PRC", 8*60*60))
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return err
+	}
+	t.scheduler = gocron.NewScheduler(loc)
 
 	// _, err := t.scheduler.CronWithSeconds("0/30 * * * * *").Do(func() {
 	// 	err := t.userTask.CheckUser(ctx)
@@ -58,7 +60,7 @@ func (t *TaskServer) Start(ctx context.Context) error {
 	// 	t.log.Error("检查用户任务失败", zap.Error(err))
 	// }
 
-	_, err := t.scheduler.CronWithSeconds("0/5 * * * * *").Do(func() {
+	_, err = t.scheduler.CronWithSeconds("0/5 * * * * *").Do(func() {
 		err := t.reportTask.ProcessReportQueue(ctx)
 		if err != nil {
 			t.log.Error("report task failed", zap.Error(err))

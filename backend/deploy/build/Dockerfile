@@ -19,8 +19,7 @@ FROM ${REGISTRY}/alpine:3.18
 RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 
 RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo "Asia/Shanghai" > /etc/timezone \
-    && apk del tzdata
+    && echo "Asia/Shanghai" > /etc/timezone
 
 ARG APP_ENV=prod
 ENV APP_ENV=${APP_ENV}

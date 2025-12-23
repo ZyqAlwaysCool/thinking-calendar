@@ -43,8 +43,8 @@ func main() {
 		panic("MODEL_API_KEY 未配置，禁止启动服务")
 	}
 	conf.Set("llm.openai.api_key", apiKey)
-
 	logger := log.NewLog(conf)
+	logger.Info("MODEL_API_KEY 已加载", zap.String("masked", maskKey(apiKey)))
 
 	app, cleanup, err := wire.NewWire(conf, logger)
 	defer cleanup()
@@ -56,4 +56,19 @@ func main() {
 	if err = app.Run(context.Background()); err != nil {
 		panic(err)
 	}
+}
+
+func maskKey(key string) string {
+	if len(key) <= 5 {
+		return "***"
+	}
+	prefix := key
+	suffix := ""
+	if len(key) > 5 {
+		prefix = key[:2]
+	}
+	if len(key) > 5 {
+		suffix = key[len(key)-3:]
+	}
+	return prefix + "***" + suffix
 }

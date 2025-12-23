@@ -17,12 +17,20 @@ import (
 	"context"
 	"flag"
 	"os"
+
+	"go.uber.org/zap"
 )
 
 func main() {
 	var envConf = flag.String("conf", "config/local.yml", "config path, eg: -conf ./config/local.yml")
 	flag.Parse()
 	conf := config.NewConfig(*envConf)
+
+	logPath := os.Getenv("LOG_FILE_NAME")
+	if logPath == "" {
+		logPath = "./storage/task-logs/task.log"
+	}
+	conf.Set("log.log_file_name", logPath)
 
 	apiKey := os.Getenv("MODEL_API_KEY")
 	if apiKey == "" {
@@ -31,6 +39,7 @@ func main() {
 	conf.Set("llm.openai.api_key", apiKey)
 
 	logger := log.NewLog(conf)
+	logger.Info("MODEL_API_KEY 已加载", zap.String("masked", maskKey(apiKey)))
 	logger.Info("task start")
 	app, cleanup, err := wire.NewWire(conf, logger)
 	defer cleanup()
@@ -41,4 +50,13 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func maskKey(key string) string {
+	if len(key) <= 5 {
+		return "***"
+	}
+	prefix := key[:2]
+	suffix := key[len(key)-3:]
+	return prefix + "***" + suffix
 }
