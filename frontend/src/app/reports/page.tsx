@@ -150,19 +150,6 @@ const ReportsPage = () => {
     }
   }
 
-  const handleExport = () => {
-    try {
-      const printWindow = window.open('', '_blank')
-      if (!printWindow) throw new Error(PAGE_TEXT.exportFail)
-      printWindow.document.write(`<pre style="font-family: system-ui; white-space: pre-wrap;">${editorContent}</pre>`)
-      printWindow.document.close()
-      printWindow.print()
-      toast.success(PAGE_TEXT.exportSuccess)
-    } catch (error) {
-      toast.error(PAGE_TEXT.exportFail)
-    }
-  }
-
   const onSelectReport = (report: Report) => {
     setSelectedReport(report)
     setEditorContent(report.content)
@@ -366,9 +353,6 @@ const ReportsPage = () => {
                   {(generating || typing) && (
                     <div className="text-sm text-gray-400 dark:text-gray-500">{PAGE_TEXT.reportGeneratingHint}</div>
                   )}
-                  <Button variant="outline" size="lg" className="flex items-center gap-2">
-                    {PAGE_TEXT.exportBatch}
-                  </Button>
                 </div>
               </Card>
 
@@ -397,9 +381,6 @@ const ReportsPage = () => {
                 <div className="flex flex-wrap gap-3">
                   <Button variant="outline" onClick={handleCopy}>
                     {PAGE_TEXT.copyReport}
-                  </Button>
-                  <Button variant="outline" onClick={handleExport}>
-                    {PAGE_TEXT.exportReport}
                   </Button>
                   <Button onClick={handleConfirm} disabled={!selectedReport || selectedReport.confirmed || selectedReport.status !== 'ready'}>
                     {selectedReport?.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.confirmReport}

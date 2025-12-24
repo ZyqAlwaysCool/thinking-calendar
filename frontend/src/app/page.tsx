@@ -37,7 +37,7 @@ const LoginPage = () => {
       toast.error(PAGE_TEXT.loginRequired)
       return
     }
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
+    if (trimmedUsername.length < 6 || trimmedUsername.length > 20) {
       toast.error(PAGE_TEXT.loginUsernameLength)
       return
     }

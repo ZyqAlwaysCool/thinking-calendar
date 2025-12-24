@@ -70,7 +70,43 @@ export const useLogStore = create<LogState>((set, get) => ({
   saveLog: async (payload: SaveLogPayload) => {
     set({ saving: true })
     try {
-      const res = await api.post<ApiResponse<RecordResp>>('/records', payload)
+      const trimmed = payload.content.trim()
+      const current = get().currentLog
+
+      if (!trimmed) {
+        if (current?.id) {
+          await api.delete<ApiResponse<unknown>>(`/records/${current.id}`)
+          set({
+            logs: get().logs.filter(item => item.id !== current.id),
+            currentLog: {
+              id: '',
+              date: payload.date,
+              content: '',
+              updatedAt: new Date().toISOString(),
+              version: 0
+            },
+            saving: false
+          })
+          toast.success(PAGE_TEXT.saveSuccess)
+          return
+        }
+        set({
+          currentLog: {
+            id: '',
+            date: payload.date,
+            content: '',
+            updatedAt: new Date().toISOString(),
+            version: 0
+          },
+          saving: false
+        })
+        return
+      }
+
+      const res = await api.post<ApiResponse<RecordResp>>('/records', {
+        ...payload,
+        content: trimmed
+      })
       const saved = mapRecord(res.data.data)
       const existed = get().logs.some(item => item.date === saved.date)
       set({

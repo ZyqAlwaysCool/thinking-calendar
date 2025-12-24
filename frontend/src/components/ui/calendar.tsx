@@ -16,14 +16,16 @@ export const Calendar = ({ className, classNames, showOutsideDays = true, ...pro
       caption_label: 'text-base font-semibold',
       nav: 'flex items-center space-x-2',
       nav_button:
-        'inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02] dark:text-gray-100 dark:hover:bg-gray-900',
+        'inline-flex items-center justify-center h-8 w-8 rounded-lg text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-900 hover:scale-105 transition-all duration-200',
       head_row: 'grid grid-cols-7 text-center text-xs text-gray-300',
       head_cell: 'py-1',
       row: 'grid grid-cols-7 text-center',
       cell: 'relative p-1 text-sm',
-      day: 'h-10 w-10 rounded-lg text-gray-700 transition-all duration-200 hover:bg-gray-100 hover:scale-[1.02] dark:text-gray-50 dark:hover:bg-gray-900',
-      day_selected: 'bg-gray-900 text-gray-50 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200',
-      day_today: 'border-4 border-gray-900 dark:border-gray-100',
+      day:
+        'flex items-center justify-center h-10 w-10 rounded-lg text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:scale-105 transition-all duration-200',
+      day_selected:
+        'flex items-center justify-center h-10 w-10 rounded-lg text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:scale-105 transition-all duration-200',
+      day_today: 'ring-2 ring-gray-900 dark:ring-gray-100',
       day_outside: 'text-gray-300 dark:text-gray-700',
       day_disabled: 'text-gray-300 opacity-60',
       ...classNames

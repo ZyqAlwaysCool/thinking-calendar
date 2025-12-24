@@ -10,12 +10,12 @@ export const NAV_LABELS = {
 
 export const PAGE_TEXT = {
   loginTitle: 'Thinking-Calendar',
-  loginSubtitle: '专注工作记录，AI 帮你写周报',
+  loginSubtitle: '专注工作记录，AI 帮你写总结',
   loginButton: '登录/注册',
   loginSuccess: '登录成功',
   loginFail: '登录失败，请稍后重试',
   loginRequired: '请填写用户名和密码',
-  loginUsernameLength: '用户名长度需 3-20 个字符',
+  loginUsernameLength: '用户名长度需 6-20 个字符',
   loginPasswordLength: '密码长度需 6-32 个字符',
   loginAuthRequired: '请先登录后再访问',
   usernamePlaceholder: '请输入用户名',

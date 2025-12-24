@@ -63,7 +63,7 @@ const HistoryPage = () => {
     try {
       await saveLog({ date: dateStr, content: draft })
       await fetchLogs()
-      setOpen(false)
+      handleDialogChange(false)
     } catch {
       // 已有提示
     }
@@ -87,6 +87,14 @@ const HistoryPage = () => {
       await fetchLogByDate(format(parsed, 'yyyy-MM-dd'))
     } catch {
       // 已有提示
+    }
+  }
+
+  const handleDialogChange = (value: boolean) => {
+    setOpen(value)
+    if (!value) {
+      setSelectedDate(undefined)
+      setDraft('')
     }
   }
 
@@ -117,7 +125,7 @@ const HistoryPage = () => {
                   return (
                     <div className="relative flex h-10 w-10 items-center justify-center">
                       <span>{date.getDate()}</span>
-                      {hasLog && <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-gray-800 dark:bg-gray-100" />}
+                      {hasLog && <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-black dark:bg-white" />}
                     </div>
                   )
                 }
@@ -149,7 +157,7 @@ const HistoryPage = () => {
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -158,7 +166,7 @@ const HistoryPage = () => {
           </DialogHeader>
           <Editor value={draft} onChange={setDraft} minHeight="400px" />
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={() => handleDialogChange(false)}>
               {DIALOG_TEXT.close}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
