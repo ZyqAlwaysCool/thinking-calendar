@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, FileText, History, LayoutDashboard, Menu } from 'lucide-react'
+import { CalendarDays, FileText, History, LayoutDashboard, Menu, Settings } from 'lucide-react'
 import { NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
@@ -13,7 +13,8 @@ const navItems = [
   { href: '/today', label: NAV_LABELS.today, icon: CalendarDays },
   { href: '/history', label: NAV_LABELS.history, icon: History },
   { href: '/dashboard', label: NAV_LABELS.dashboard, icon: LayoutDashboard },
-  { href: '/reports', label: NAV_LABELS.reports, icon: FileText }
+  { href: '/reports', label: NAV_LABELS.reports, icon: FileText },
+  { href: '/settings', label: NAV_LABELS.settings, icon: Settings }
 ]
 
 const DesktopSidebar = () => {

@@ -4,6 +4,7 @@ export const NAV_LABELS = {
   history: '历史',
   dashboard: '看板',
   reports: '报告',
+  settings: '设置',
   recent: '最近报告',
   viewAll: '查看全部 →'
 }
@@ -79,7 +80,17 @@ export const PAGE_TEXT = {
   missingFill: '点击补充',
   yearlyHint: '基于已确认的周报或月报生成',
   userMenuGuest: '未登录',
-  userMenuLogout: '退出登录'
+  userMenuLogout: '退出登录',
+  settingsTitle: '设置',
+  settingsSubtitle: '配置周报、月报生成模板',
+  settingsWeekTitle: '周报模板',
+  settingsMonthTitle: '月报模板',
+  settingsTemplateHint: '模板将用于生成报告时替换默认提示词',
+  settingsEmpty: '暂无模板，点击编辑',
+  settingsEdit: '编辑模板',
+  settingsSave: '保存模板',
+  settingsLoadFail: '加载设置失败',
+  settingsSaveFail: '保存设置失败'
 }
 
 export const REPORT_OPTIONS = {

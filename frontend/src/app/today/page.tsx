@@ -16,7 +16,7 @@ const TodayPage = () => {
   const [content, setContent] = useState('')
   const { currentLog, loading, saving, fetchLogByDate, saveLog } = useLogStore()
   const lastUpdatedHint = useMemo(() => {
-    if (!currentLog) return ''
+    if (!currentLog || !currentLog.updatedAt) return ''
     const updated = parseISO(currentLog.updatedAt)
     return formatDistanceToNow(updated, { locale: zhCN, addSuffix: true })
   }, [currentLog])
@@ -32,8 +32,9 @@ const TodayPage = () => {
   }, [currentLog])
 
   const handleSave = async () => {
+    const trimmed = content.trim()
     try {
-      await saveLog({ date: today, content })
+      await saveLog({ date: today, content: trimmed })
     } catch {
       // 已有提示
     }
@@ -46,7 +47,7 @@ const TodayPage = () => {
       <div className="space-y-6">
         <div className="space-y-1">
           <div className="text-3xl font-semibold text-gray-900 dark:text-gray-50">{todayLabel}</div>
-          {currentLog?.updatedAt && (
+          {currentLog?.updatedAt && content.trim() && (
             <div className="text-sm text-gray-400 dark:text-gray-500">{`${PAGE_TEXT.lastUpdatedRecent}：${lastUpdatedHint}`}</div>
           )}
         </div>

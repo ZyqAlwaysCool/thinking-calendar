@@ -73,3 +73,11 @@ export type MonthDashboard = {
   rate: number
   days: MonthDay[]
 }
+
+export type UserSettings = {
+  userId: string
+  reportTemplateWeek: string
+  reportTemplateMonth: string
+  autoGenerateWeekly: boolean
+  weeklyReportTime: string
+}
