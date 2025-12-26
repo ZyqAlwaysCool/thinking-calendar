@@ -84,7 +84,7 @@ func (s *reportService) GenerateReport(ctx context.Context, userId string, req *
 		return "", v1.ErrInvalidDate
 	}
 	today := time.Now()
-	if end.After(today) || start.After(today) {
+	if start.After(today) {
 		return "", v1.ErrInvalidDate
 	}
 	if end.Before(start) {
