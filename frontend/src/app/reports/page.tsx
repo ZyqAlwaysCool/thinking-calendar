@@ -84,7 +84,7 @@ const ReportsPage = () => {
     selectedReport.template === form.template
   const isRegenerate = currentKey === lastGeneratedKey || !!matchSelected
 
-  const startTyping = (content: string) => {
+  const startTyping = (content: string, reportId: string) => {
     if (typingTimer.current) {
       clearInterval(typingTimer.current)
       typingTimer.current = null
@@ -99,10 +99,8 @@ const ReportsPage = () => {
         setEditorContent(chars.slice(0, index).join(''))
         if (index >= chars.length) {
           if (typingTimer.current) clearInterval(typingTimer.current)
-          if (selectedReport && selectedReport.confirmed) {
-            setSelectedReport({ ...selectedReport, confirmed: false })
-            markUnconfirmed(selectedReport.id)
-          }
+          setSelectedReport(prev => (prev && prev.id === reportId ? { ...prev, confirmed: false } : prev))
+          markUnconfirmed(reportId)
           setTyping(false)
         }
       }, 20)
@@ -123,7 +121,7 @@ const ReportsPage = () => {
       const created = await generateReport(form)
       setSelectedReport(created)
       setRangeAnchor(created.startDate)
-      startTyping(created.content)
+      startTyping(created.content, created.id)
       setLastGeneratedKey(currentKey)
     } catch {
       // 已有提示
