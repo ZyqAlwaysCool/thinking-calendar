@@ -15,6 +15,185 @@
         "version": "1.0.0"
     },
     "paths": {
+        "/attendance/records/delete": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "补卡"
+                ],
+                "summary": "删除补卡记录",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AttendanceRecordDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/records/query": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "补卡"
+                ],
+                "summary": "查询补卡记录",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AttendanceRecordsQueryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/records/save": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "补卡"
+                ],
+                "summary": "保存补卡记录",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AttendanceRecordSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/settings/get": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "补卡"
+                ],
+                "summary": "获取补卡设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/settings/save": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "补卡"
+                ],
+                "summary": "保存补卡设置",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AttendanceSettingsSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/month": {
             "get": {
                 "security": [
@@ -596,6 +775,87 @@
         }
     },
     "definitions": {
+        "v1.AttendanceRecordDeleteReq": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "记录 ID",
+                    "type": "string",
+                    "example": "attrec_123"
+                }
+            }
+        },
+        "v1.AttendanceRecordSaveReq": {
+            "type": "object",
+            "required": [
+                "date",
+                "type"
+            ],
+            "properties": {
+                "date": {
+                    "description": "补卡日期",
+                    "type": "string",
+                    "example": "2026-02-11"
+                },
+                "note": {
+                    "description": "备注",
+                    "type": "string",
+                    "example": "地铁延误迟到"
+                },
+                "type": {
+                    "description": "类型",
+                    "type": "string",
+                    "example": "in"
+                }
+            }
+        },
+        "v1.AttendanceRecordsQueryReq": {
+            "type": "object",
+            "required": [
+                "month"
+            ],
+            "properties": {
+                "month": {
+                    "description": "月份",
+                    "type": "string",
+                    "example": "2026-02"
+                }
+            }
+        },
+        "v1.AttendanceSettingsSaveReq": {
+            "type": "object",
+            "required": [
+                "email",
+                "monthly_limit",
+                "push_day",
+                "push_time"
+            ],
+            "properties": {
+                "email": {
+                    "description": "收件邮箱",
+                    "type": "string",
+                    "example": "a@b.com"
+                },
+                "monthly_limit": {
+                    "description": "每月上限",
+                    "type": "integer",
+                    "example": 8
+                },
+                "push_day": {
+                    "description": "推送日期",
+                    "type": "string",
+                    "example": "last"
+                },
+                "push_time": {
+                    "description": "推送时间",
+                    "type": "string",
+                    "example": "09:00"
+                }
+            }
+        },
         "v1.ConfirmReportReq": {
             "type": "object",
             "required": [

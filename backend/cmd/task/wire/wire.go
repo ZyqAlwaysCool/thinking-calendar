@@ -35,12 +35,16 @@ var repositorySet = wire.NewSet(
 	repository.NewUserSettingsRepository,
 	repository.NewRecordRepository,
 	repository.NewReportRepository,
+	repository.NewAttendanceRepository,
+	repository.NewMailRepository,
 )
 
 var serviceSet = wire.NewSet(
 	service.NewService,
 	service.NewRecordService,
 	service.NewReportService,
+	service.NewMailService,
+	service.NewAttendanceService,
 	llm.NewOpenAIClient,
 )
 
@@ -48,6 +52,8 @@ var taskSet = wire.NewSet(
 	task.NewTask,
 	task.NewUserTask,
 	task.NewReportTask,
+	task.NewAttendanceTask,
+	task.NewMailTask,
 )
 var serverSet = wire.NewSet(
 	server.NewTaskServer,

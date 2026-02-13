@@ -260,6 +260,7 @@ func TestUserService_UpdateProfile(t *testing.T) {
 	userId := "123"
 	req := &v1.UpdateUserSettingsReq{
 		UserSettings: v1.UserSettings{
+			UserID:              userId,
 			ReportTemplateWeek:  "week",
 			ReportTemplateMonth: "month",
 			AutoGenerateWeekly:  true,
@@ -295,6 +296,7 @@ func TestUserService_UpdateProfile_UserNotFound(t *testing.T) {
 	userId := "123"
 	req := &v1.UpdateUserSettingsReq{
 		UserSettings: v1.UserSettings{
+			UserID:              userId,
 			ReportTemplateWeek:  "week",
 			ReportTemplateMonth: "month",
 			AutoGenerateWeekly:  true,

@@ -35,7 +35,7 @@ func TestUserHandler_Register(t *testing.T) {
 		JSON().
 		Object()
 	obj.Value("code").IsEqual(0)
-	obj.Value("message").IsEqual("ok")
+	obj.Value("msg").IsEqual("ok")
 }
 
 func TestUserHandler_Login(t *testing.T) {
@@ -48,8 +48,12 @@ func TestUserHandler_Login(t *testing.T) {
 	}
 
 	tk := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiJ4eHgiLCJleHAiOjE3MzgyMjA1MTQsIm5iZiI6MTczMDQ0NDUxNCwiaWF0IjoxNzMwNDQ0NTE0fQ.3D4YupmPBCkv16ESnYyWSV5Mxcdu0twzEUqx0K-UiWo"
+	expireAt := "2026-02-12T10:00:00Z"
 	mockUserService := mock_service.NewMockUserService(ctrl)
-	mockUserService.EXPECT().Login(gomock.Any(), &params).Return(tk, nil)
+	mockUserService.EXPECT().Login(gomock.Any(), &params).Return(v1.LoginRespData{
+		AccessToken: tk,
+		ExpireAt:    expireAt,
+	}, nil)
 
 	userHandler := handler.NewUserHandler(hdl, mockUserService)
 	router.POST("/login", userHandler.Login)
@@ -62,8 +66,9 @@ func TestUserHandler_Login(t *testing.T) {
 		JSON().
 		Object()
 	obj.Value("code").IsEqual(0)
-	obj.Value("message").IsEqual("ok")
-	obj.Value("data").Object().Value("accessToken").IsEqual(tk)
+	obj.Value("msg").IsEqual("ok")
+	obj.Value("data").Object().Value("access_token").IsEqual(tk)
+	obj.Value("data").Object().Value("expire_at").IsEqual(expireAt)
 }
 
 func TestUserHandler_GetProfile(t *testing.T) {
@@ -90,7 +95,7 @@ func TestUserHandler_GetProfile(t *testing.T) {
 		JSON().
 		Object()
 	obj.Value("code").IsEqual(0)
-	obj.Value("message").IsEqual("ok")
+	obj.Value("msg").IsEqual("ok")
 }
 
 func TestUserHandler_GetUserSettings(t *testing.T) {
@@ -119,9 +124,9 @@ func TestUserHandler_GetUserSettings(t *testing.T) {
 		JSON().
 		Object()
 	obj.Value("code").IsEqual(0)
-	obj.Value("message").IsEqual("ok")
+	obj.Value("msg").IsEqual("ok")
 	objData := obj.Value("data").Object()
-	objData.Value("userID").IsEqual(userId)
+	objData.Value("user_id").IsEqual(userId)
 	objData.Value("report_template_week").IsEqual("week")
 	objData.Value("report_template_month").IsEqual("month")
 	objData.Value("auto_generate_weekly").IsEqual(true)
@@ -158,5 +163,5 @@ func TestUserHandler_UpdateUserSettings(t *testing.T) {
 		JSON().
 		Object()
 	obj.Value("code").IsEqual(0)
-	obj.Value("message").IsEqual("ok")
+	obj.Value("msg").IsEqual("ok")
 }

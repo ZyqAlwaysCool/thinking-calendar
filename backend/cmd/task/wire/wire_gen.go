@@ -42,7 +42,13 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	}
 	reportService := service.NewReportService(serviceService, reportRepository, recordService, userSettingsRepository, openAIClient)
 	reportTask := task.NewReportTask(taskTask, reportRepository, reportService)
-	taskServer := server.NewTaskServer(logger, userTask, reportTask)
+	attendanceRepository := repository.NewAttendanceRepository(repositoryRepository)
+	mailRepository := repository.NewMailRepository(repositoryRepository)
+	mailService := service.NewMailService(serviceService, mailRepository, viperViper)
+	attendanceService := service.NewAttendanceService(serviceService, attendanceRepository, mailService)
+	attendanceTask := task.NewAttendanceTask(taskTask, attendanceService)
+	mailTask := task.NewMailTask(taskTask, mailService)
+	taskServer := server.NewTaskServer(logger, userTask, reportTask, attendanceTask, mailTask)
 	appApp := newApp(taskServer)
 	return appApp, func() {
 	}, nil
@@ -50,11 +56,11 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 // wire.go:
 
-var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository)
+var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository, repository.NewAttendanceRepository, repository.NewMailRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewRecordService, service.NewReportService, llm.NewOpenAIClient)
+var serviceSet = wire.NewSet(service.NewService, service.NewRecordService, service.NewReportService, service.NewMailService, service.NewAttendanceService, llm.NewOpenAIClient)
 
-var taskSet = wire.NewSet(task.NewTask, task.NewUserTask, task.NewReportTask)
+var taskSet = wire.NewSet(task.NewTask, task.NewUserTask, task.NewReportTask, task.NewAttendanceTask, task.NewMailTask)
 
 var serverSet = wire.NewSet(server.NewTaskServer)
 

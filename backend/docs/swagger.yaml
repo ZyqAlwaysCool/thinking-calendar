@@ -1,4 +1,64 @@
 definitions:
+  v1.AttendanceRecordDeleteReq:
+    properties:
+      id:
+        description: 记录 ID
+        example: attrec_123
+        type: string
+    required:
+    - id
+    type: object
+  v1.AttendanceRecordSaveReq:
+    properties:
+      date:
+        description: 补卡日期
+        example: "2026-02-11"
+        type: string
+      note:
+        description: 备注
+        example: 地铁延误迟到
+        type: string
+      type:
+        description: 类型
+        example: in
+        type: string
+    required:
+    - date
+    - type
+    type: object
+  v1.AttendanceRecordsQueryReq:
+    properties:
+      month:
+        description: 月份
+        example: 2026-02
+        type: string
+    required:
+    - month
+    type: object
+  v1.AttendanceSettingsSaveReq:
+    properties:
+      email:
+        description: 收件邮箱
+        example: a@b.com
+        type: string
+      monthly_limit:
+        description: 每月上限
+        example: 8
+        type: integer
+      push_day:
+        description: 推送日期
+        example: last
+        type: string
+      push_time:
+        description: 推送时间
+        example: "09:00"
+        type: string
+    required:
+    - email
+    - monthly_limit
+    - push_day
+    - push_time
+    type: object
   v1.ConfirmReportReq:
     properties:
       report_id:
@@ -136,6 +196,114 @@ info:
   title: thinking calendar API
   version: 1.0.0
 paths:
+  /attendance/records/delete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AttendanceRecordDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 删除补卡记录
+      tags:
+      - 补卡
+  /attendance/records/query:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AttendanceRecordsQueryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 查询补卡记录
+      tags:
+      - 补卡
+  /attendance/records/save:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AttendanceRecordSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 保存补卡记录
+      tags:
+      - 补卡
+  /attendance/settings/get:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 获取补卡设置
+      tags:
+      - 补卡
+  /attendance/settings/save:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AttendanceSettingsSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 保存补卡设置
+      tags:
+      - 补卡
   /dashboard/month:
     get:
       consumes:

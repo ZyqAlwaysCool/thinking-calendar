@@ -40,6 +40,11 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	recordRespository := repository.NewRecordRepository(repositoryRepository)
 	recordService := service.NewRecordService(serviceService, recordRespository)
 	recordHandler := handler.NewRecordHandler(handlerHandler, recordService)
+	attendanceRepository := repository.NewAttendanceRepository(repositoryRepository)
+	mailRepository := repository.NewMailRepository(repositoryRepository)
+	mailService := service.NewMailService(serviceService, mailRepository, viperViper)
+	attendanceService := service.NewAttendanceService(serviceService, attendanceRepository, mailService)
+	attendanceHandler := handler.NewAttendanceHandler(handlerHandler, attendanceService)
 	reportRepository := repository.NewReportRepository(repositoryRepository)
 	openAIClient, err := llm.NewOpenAIClient(viperViper)
 	if err != nil {
@@ -50,13 +55,14 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	dashboardService := service.NewDashboardService(serviceService, recordRespository, reportRepository)
 	dashboardHandler := handler.NewDashboardHandler(handlerHandler, dashboardService)
 	routerDeps := router.RouterDeps{
-		Logger:           logger,
-		Config:           viperViper,
-		JWT:              jwtJWT,
-		UserHandler:      userHandler,
-		RecordHandler:    recordHandler,
-		ReportHandler:    reportHandler,
-		DashboardHandler: dashboardHandler,
+		Logger:            logger,
+		Config:            viperViper,
+		JWT:               jwtJWT,
+		UserHandler:       userHandler,
+		RecordHandler:     recordHandler,
+		AttendanceHandler: attendanceHandler,
+		ReportHandler:     reportHandler,
+		DashboardHandler:  dashboardHandler,
 	}
 	httpServer := server.NewHTTPServer(routerDeps)
 	jobJob := job.NewJob(transaction, logger, sidSid)
@@ -69,11 +75,11 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 // wire.go:
 
-var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository)
+var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewUserSettingsRepository, repository.NewRecordRepository, repository.NewReportRepository, repository.NewAttendanceRepository, repository.NewMailRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewUserService, service.NewRecordService, service.NewReportService, service.NewDashboardService, llm.NewOpenAIClient)
+var serviceSet = wire.NewSet(service.NewService, service.NewUserService, service.NewRecordService, service.NewReportService, service.NewDashboardService, service.NewMailService, service.NewAttendanceService, llm.NewOpenAIClient)
 
-var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewRecordHandler, handler.NewReportHandler, handler.NewDashboardHandler)
+var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewRecordHandler, handler.NewAttendanceHandler, handler.NewReportHandler, handler.NewDashboardHandler)
 
 var jobSet = wire.NewSet(job.NewJob, job.NewUserJob)
 

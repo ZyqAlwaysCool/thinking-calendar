@@ -66,10 +66,10 @@ func (mr *MockUserServiceMockRecorder) GetUserSettings(ctx, userId interface{}) 
 }
 
 // Login mocks base method.
-func (m *MockUserService) Login(ctx context.Context, req *v1.LoginReq) (string, error) {
+func (m *MockUserService) Login(ctx context.Context, req *v1.LoginReq) (v1.LoginRespData, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login", ctx, req)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(v1.LoginRespData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

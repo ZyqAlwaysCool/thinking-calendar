@@ -50,4 +50,16 @@ var (
 
 	// dashboard errors
 	ErrGetDashboardFailed = newError(4001, "获取看板数据失败")
+
+	// attendance errors
+	ErrAttendanceSettingsInvalid = newError(5001, "补卡设置不合法")
+	ErrAttendanceEmailInvalid    = newError(5002, "邮箱格式不合法")
+	ErrAttendanceLimitReached    = newError(5003, "补卡次数已达上限")
+	ErrAttendanceLocked          = newError(5004, "当月补卡已锁定")
+	ErrAttendanceTypeInvalid     = newError(5005, "补卡类型不合法")
+	ErrAttendanceDateInvalid     = newError(5006, "补卡日期不合法")
+	ErrAttendanceGetFailed       = newError(5007, "获取补卡数据失败")
+	ErrAttendanceSaveFailed      = newError(5008, "保存补卡数据失败")
+	ErrAttendanceDeleteFailed    = newError(5009, "删除补卡数据失败")
+	ErrAttendanceRecordNotExist  = newError(5010, "补卡记录不存在")
 )

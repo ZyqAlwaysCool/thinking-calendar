@@ -3,7 +3,7 @@
  * @Author: zyq
  * @Date: 2025-12-12 16:56:59
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 21:16:48
+ * @LastEditTime: 2026-02-13 14:45:04
  */
 package main
 
@@ -36,6 +36,9 @@ import (
 func main() {
 	var envConf = flag.String("conf", "config/local.yml", "config path, eg: -conf ./config/local.yml")
 	flag.Parse()
+	if err := config.LoadDotEnv(".env"); err != nil {
+		panic("请确认.env文件是否存在. 需要加载环境变量配置")
+	}
 	conf := config.NewConfig(*envConf)
 
 	apiKey := os.Getenv("MODEL_API_KEY")
@@ -45,6 +48,10 @@ func main() {
 	conf.Set("llm.openai.api_key", apiKey)
 	logger := log.NewLog(conf)
 	logger.Info("MODEL_API_KEY 已加载", zap.String("masked", maskKey(apiKey)))
+	mailConfig, err := config.LoadMailSMTPConfigFromEnv()
+	if err != nil {
+		panic(err)
+	}
 
 	app, cleanup, err := wire.NewWire(conf, logger)
 	defer cleanup()
@@ -53,7 +60,8 @@ func main() {
 	}
 	logger.Info("server start", zap.String("host", fmt.Sprintf("http://%s:%d", conf.GetString("http.host"), conf.GetInt("http.port"))))
 	logger.Info("swagger addr", zap.String("addr", fmt.Sprintf("http://%s:%d/swagger/index.html", conf.GetString("http.host"), conf.GetInt("http.port"))))
-	if err = app.Run(context.Background()); err != nil {
+	ctx := config.WithMailSMTPConfig(context.Background(), mailConfig)
+	if err = app.Run(ctx); err != nil {
 		panic(err)
 	}
 }

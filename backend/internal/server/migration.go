@@ -34,6 +34,9 @@ func (m *MigrateServer) Start(ctx context.Context) error {
 		&model.UserSettings{},
 		&model.Record{},
 		&model.Report{},
+		&model.AttendanceSettings{},
+		&model.AttendanceRecord{},
+		&model.MailJob{},
 	); err != nil {
 		m.log.Error("user migrate error", zap.Error(err))
 		return err

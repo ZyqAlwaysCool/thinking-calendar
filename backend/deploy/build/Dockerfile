@@ -26,6 +26,7 @@ ENV APP_ENV=${APP_ENV}
 
 WORKDIR /data/app
 COPY --from=builder /data/app/bin /data/app
+COPY --from=builder /data/app/.env /data/app/.env
 
 EXPOSE 8998
 ENTRYPOINT [ "./server" ]

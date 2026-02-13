@@ -39,6 +39,8 @@ var repositorySet = wire.NewSet(
 	repository.NewUserSettingsRepository,
 	repository.NewRecordRepository,
 	repository.NewReportRepository,
+	repository.NewAttendanceRepository,
+	repository.NewMailRepository,
 )
 
 var serviceSet = wire.NewSet(
@@ -47,6 +49,8 @@ var serviceSet = wire.NewSet(
 	service.NewRecordService,
 	service.NewReportService,
 	service.NewDashboardService,
+	service.NewMailService,
+	service.NewAttendanceService,
 	llm.NewOpenAIClient,
 )
 
@@ -54,6 +58,7 @@ var handlerSet = wire.NewSet(
 	handler.NewHandler,
 	handler.NewUserHandler,
 	handler.NewRecordHandler,
+	handler.NewAttendanceHandler,
 	handler.NewReportHandler,
 	handler.NewDashboardHandler,
 )

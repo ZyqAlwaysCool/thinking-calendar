@@ -3,7 +3,7 @@
  * @Author: zyq
  * @Date: 2025-12-12 16:56:59
  * @LastEditors: zyq
- * @LastEditTime: 2025-12-17 15:17:39
+ * @LastEditTime: 2026-02-13 17:46:08
  */
 package server
 
@@ -18,21 +18,27 @@ import (
 )
 
 type TaskServer struct {
-	log        *log.Logger
-	scheduler  *gocron.Scheduler
-	userTask   task.UserTask
-	reportTask task.ReportTask
+	log            *log.Logger
+	scheduler      *gocron.Scheduler
+	userTask       task.UserTask
+	reportTask     task.ReportTask
+	attendanceTask task.AttendanceTask
+	mailTask       task.MailTask
 }
 
 func NewTaskServer(
 	log *log.Logger,
 	userTask task.UserTask,
 	reportTask task.ReportTask,
+	attendanceTask task.AttendanceTask,
+	mailTask task.MailTask,
 ) *TaskServer {
 	return &TaskServer{
-		log:        log,
-		userTask:   userTask,
-		reportTask: reportTask,
+		log:            log,
+		userTask:       userTask,
+		reportTask:     reportTask,
+		attendanceTask: attendanceTask,
+		mailTask:       mailTask,
 	}
 }
 func (t *TaskServer) Start(ctx context.Context) error {
@@ -42,6 +48,12 @@ func (t *TaskServer) Start(ctx context.Context) error {
 
 	if err := t.reportTask.Start(ctx); err != nil {
 		t.log.Error("start report task failed", zap.Error(err))
+	}
+	if err := t.attendanceTask.Start(ctx); err != nil {
+		t.log.Error("start attendance task failed", zap.Error(err))
+	}
+	if err := t.mailTask.Start(ctx); err != nil {
+		t.log.Error("start mail task failed", zap.Error(err))
 	}
 
 	loc, err := time.LoadLocation("Asia/Shanghai")
@@ -70,6 +82,26 @@ func (t *TaskServer) Start(ctx context.Context) error {
 		t.log.Error("report task failed", zap.Error(err))
 	}
 
+	_, err = t.scheduler.CronWithSeconds("0 0 9 * * *").Do(func() {
+		err := t.attendanceTask.ProcessAttendancePush(ctx)
+		if err != nil {
+			t.log.Error("attendance task failed", zap.Error(err))
+		}
+	})
+	if err != nil {
+		t.log.Error("attendance task failed", zap.Error(err))
+	}
+
+	_, err = t.scheduler.CronWithSeconds("0/5 * * * * *").Do(func() {
+		err := t.mailTask.ProcessMailQueue(ctx)
+		if err != nil {
+			t.log.Error("mail task failed", zap.Error(err))
+		}
+	})
+	if err != nil {
+		t.log.Error("mail task failed", zap.Error(err))
+	}
+
 	t.scheduler.StartBlocking()
 	return nil
 }
@@ -77,6 +109,12 @@ func (t *TaskServer) Stop(ctx context.Context) error {
 	t.scheduler.Stop()
 	if err := t.reportTask.Stop(ctx); err != nil {
 		t.log.Error("stop report task failed", zap.Error(err))
+	}
+	if err := t.attendanceTask.Stop(ctx); err != nil {
+		t.log.Error("stop attendance task failed", zap.Error(err))
+	}
+	if err := t.mailTask.Stop(ctx); err != nil {
+		t.log.Error("stop mail task failed", zap.Error(err))
 	}
 	t.log.Info("TaskServer stop...")
 	return nil
