@@ -482,5 +482,40 @@
       "confirmed": false,
       "createdAt": "2025-12-18T18:00:00Z"
     }
-  ]
+  ],
+  "attendance": {
+    "settings": {
+      "monthly_limit": 8,
+      "push_day": "last",
+      "push_time": "09:00",
+      "email": "yqzhang1122@163.com",
+      "last_pushed_month": "2026-01"
+    },
+    "records": [
+      {
+        "id": "attrec_1001",
+        "date": "2026-02-03",
+        "type": "in",
+        "note": "外出会议"
+      },
+      {
+        "id": "attrec_1002",
+        "date": "2026-02-03",
+        "type": "out",
+        "note": ""
+      },
+      {
+        "id": "attrec_1003",
+        "date": "2026-02-08",
+        "type": "in",
+        "note": "客户拜访"
+      },
+      {
+        "id": "attrec_1004",
+        "date": "2026-02-12",
+        "type": "out",
+        "note": "交通延误"
+      }
+    ]
+  }
 }

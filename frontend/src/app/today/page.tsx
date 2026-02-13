@@ -63,7 +63,7 @@ const TodayPage = () => {
               size="lg"
               onClick={handleSave}
               disabled={saving}
-              className="absolute bottom-6 right-6 bg-gray-900 text-gray-50 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+              className="absolute bottom-6 right-6 bg-gray-900 text-gray-50 hover:bg-gray-800 hover:scale-105 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 transition-all duration-200"
             >
               {PAGE_TEXT.save}
             </Button>

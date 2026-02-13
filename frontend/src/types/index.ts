@@ -31,6 +31,60 @@ export type Report = {
   failedReason?: string
 }
 
+export type AttendanceType = 'in' | 'out'
+
+export type AttendanceRecord = {
+  id: string
+  date: string
+  type: AttendanceType
+  note: string
+}
+
+export type AttendanceSettings = {
+  monthlyLimit: number
+  pushDay: string
+  pushTime: string
+  email: string
+  lastPushedMonth: string
+}
+
+export type AttendanceSummary = {
+  used: number
+  limit: number
+  locked: boolean
+}
+
+export type AttendanceSettingsResponse = {
+  monthly_limit: number
+  push_day: string
+  push_time: string
+  email: string
+  last_pushed_month: string
+}
+
+export type AttendanceSettingsSavePayload = {
+  monthlyLimit: number
+  pushDay: string
+  pushTime: string
+  email: string
+}
+
+export type AttendanceRecordsQueryResp = {
+  records: AttendanceRecord[]
+  summary: AttendanceSummary
+}
+
+export type AttendanceRecordSavePayload = {
+  date: string
+  type: AttendanceType
+  note: string
+}
+
+export type AttendanceRecordSaveResp = {
+  id: string
+  updated: boolean
+}
+
 export type ApiResponse<T> = {
   code: number
   msg: string

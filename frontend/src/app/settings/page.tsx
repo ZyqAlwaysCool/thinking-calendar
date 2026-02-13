@@ -69,7 +69,6 @@ const SettingsPage = () => {
         <div className="space-y-1">
           <div className="text-3xl font-semibold text-gray-900 dark:text-gray-50">{NAV_LABELS.settings}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{PAGE_TEXT.settingsSubtitle}</div>
-          {/* <div className="text-xs text-gray-400 dark:text-gray-500">{PAGE_TEXT.settingsTemplateHint}</div> */}
         </div>
 
         {loading ? (
@@ -95,7 +94,12 @@ const SettingsPage = () => {
                   <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">{PAGE_TEXT.settingsWeekTitle}</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">{PAGE_TEXT.settingsTemplateHint}</div>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setWeekOpen(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setWeekOpen(true)}
+                  className="hover:scale-105 transition-all duration-200"
+                >
                   {PAGE_TEXT.settingsEdit}
                 </Button>
               </div>
@@ -117,7 +121,12 @@ const SettingsPage = () => {
                   <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">{PAGE_TEXT.settingsMonthTitle}</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">{PAGE_TEXT.settingsTemplateHint}</div>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setMonthOpen(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMonthOpen(true)}
+                  className="hover:scale-105 transition-all duration-200"
+                >
                   {PAGE_TEXT.settingsEdit}
                 </Button>
               </div>
@@ -143,10 +152,14 @@ const SettingsPage = () => {
           </DialogHeader>
           <Editor value={weekDraft} onChange={setWeekDraft} minHeight="300px" />
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setWeekOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setWeekOpen(false)}
+              className="hover:scale-105 transition-all duration-200"
+            >
               {DIALOG_TEXT.close}
             </Button>
-            <Button onClick={handleSaveWeek} disabled={saving}>
+            <Button onClick={handleSaveWeek} disabled={saving} className="hover:scale-105 transition-all duration-200">
               {saving ? PAGE_TEXT.loading : PAGE_TEXT.settingsSave}
             </Button>
           </div>
@@ -160,10 +173,14 @@ const SettingsPage = () => {
           </DialogHeader>
           <Editor value={monthDraft} onChange={setMonthDraft} minHeight="300px" />
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setMonthOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setMonthOpen(false)}
+              className="hover:scale-105 transition-all duration-200"
+            >
               {DIALOG_TEXT.close}
             </Button>
-            <Button onClick={handleSaveMonth} disabled={saving}>
+            <Button onClick={handleSaveMonth} disabled={saving} className="hover:scale-105 transition-all duration-200">
               {saving ? PAGE_TEXT.loading : PAGE_TEXT.settingsSave}
             </Button>
           </div>

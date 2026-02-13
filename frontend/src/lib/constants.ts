@@ -1,6 +1,7 @@
 export const NAV_LABELS = {
   brand: 'Thinking-Calendar',
   today: '今天',
+  attendance: '补卡',
   history: '历史',
   dashboard: '看板',
   reports: '报告',
@@ -91,6 +92,78 @@ export const PAGE_TEXT = {
   settingsSave: '保存模板',
   settingsLoadFail: '加载设置失败',
   settingsSaveFail: '保存设置失败'
+}
+
+export const ATTENDANCE_TEXT = {
+  pageTitle: '补卡',
+  pageSubtitle: '记录与推送设置',
+  sectionTitle: '补卡记录',
+  sectionSubtitle: '本月补卡次数与记录',
+  usageLabel: '本月已用',
+  limitLabel: '上限',
+  countUnit: '次',
+  statusLocked: '已锁定',
+  statusOpen: '未推送',
+  lockedHint: '本月已推送，记录不可修改',
+  openHint: '推送前可修改记录',
+  addTitle: '新增补卡记录',
+  dateLabel: '补卡日期',
+  datePlaceholder: '选择日期',
+  dateRequired: '请先选择补卡日期',
+  typeLabel: '打卡类型',
+  typePlaceholder: '选择类型',
+  noteLabel: '备注',
+  notePlaceholder: '可选，便于后续回忆',
+  noteEmpty: '无备注',
+  addButton: '新增记录',
+  listHeaderDate: '日期',
+  listHeaderType: '类型',
+  listHeaderNote: '备注',
+  listHeaderAction: '操作',
+  actionDelete: '删除',
+  emptyRecords: '暂无补卡记录',
+  limitReached: '已达到本月补卡上限',
+  crossMonthForbidden: '仅允许选择当月日期',
+  futureDateForbidden: '当月未来日期不可补卡',
+  lockedActionForbidden: '本月已推送，记录已锁定',
+  typeIn: '上班',
+  typeOut: '下班',
+  scheduleTitle: '推送计划',
+  scheduleSubtitle: '按设置时间自动发送补卡清单邮件',
+  settingsTitle: '补卡设置',
+  settingsSubtitle: '配置补卡次数与邮件推送',
+  limitSettingLabel: '每月补卡上限',
+  limitPlaceholder: '请输入上限次数',
+  pushDayLabel: '推送日期',
+  pushTimeLabel: '推送时间',
+  pushRangeLabel: '汇总范围',
+  pushEmailLabel: '收件邮箱',
+  emailUnset: '未设置',
+  rangeCurrent: '当月',
+  lastDayLabel: '最后一天',
+  daySuffix: '号',
+  emailPlaceholder: '请输入收件邮箱',
+  saveSettings: '保存设置',
+  editSettings: '编辑设置',
+  settingsSavedHint: '已保存',
+  emailRequired: '请先填写收件邮箱',
+  settingsHint: '推送后自动锁定当月记录',
+  loadFail: '补卡信息加载失败',
+  settingsSaveSuccess: '补卡设置已保存',
+  settingsSaveFail: '补卡设置保存失败',
+  recordSaveSuccess: '补卡记录已保存',
+  recordSaveFail: '补卡记录保存失败',
+  recordDeleteSuccess: '补卡记录已删除',
+  recordDeleteFail: '补卡记录删除失败',
+  sampleNote: '外出会议'
+}
+
+export const ATTENDANCE_OPTIONS = {
+  types: [
+    { value: 'in', label: '上班' },
+    { value: 'out', label: '下班' }
+  ],
+  ranges: [{ value: 'current', label: '当月' }]
 }
 
 export const REPORT_OPTIONS = {

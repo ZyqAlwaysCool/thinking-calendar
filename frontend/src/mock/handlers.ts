@@ -1,13 +1,22 @@
 import { rest } from 'msw'
 import { format, getISOWeek, parseISO } from 'date-fns'
 import raw from './data.json'
-import { type ApiResponse, type Log, type Report } from '@/types'
+import {
+  type ApiResponse,
+  type AttendanceRecord,
+  type AttendanceRecordSaveResp,
+  type AttendanceRecordsQueryResp,
+  type AttendanceSettingsResponse,
+  type Log,
+  type Report
+} from '@/types'
 
 type RawLog = Log & { count?: number; version?: number }
 type RawReport = Report & { updatedAt?: string }
 
 const rawLogs = (raw.logs as RawLog[]) || []
 const rawReports = (raw.reports as RawReport[]) || []
+const rawAttendance = (raw.attendance as { settings?: AttendanceSettingsResponse; records?: AttendanceRecord[] }) || {}
 
 let logs: Log[] = rawLogs.map((item) => ({
   ...item,
@@ -19,6 +28,23 @@ let reports: Report[] = rawReports.map((item) => ({
   template: item.template ?? 'formal',
   updatedAt: item.updatedAt ?? item.createdAt
 }))
+let attendanceSettings: AttendanceSettingsResponse = rawAttendance.settings ?? {
+  monthly_limit: 8,
+  push_day: 'last',
+  push_time: '09:00',
+  email: '',
+  last_pushed_month: ''
+}
+let attendanceRecords: AttendanceRecord[] = rawAttendance.records ?? []
+
+const getAttendanceSummary = (month: string): AttendanceRecordsQueryResp['summary'] => {
+  const list = attendanceRecords.filter(item => item.date.startsWith(month))
+  return {
+    used: list.length,
+    limit: attendanceSettings.monthly_limit ?? 0,
+    locked: attendanceSettings.last_pushed_month === month
+  }
+}
 
 export const handlers = [
   rest.get('/api/logs', (req, res, ctx) => {
@@ -123,5 +149,85 @@ export const handlers = [
     }
     const response: ApiResponse<null> = { code: 0, msg: 'not found', data: null }
     return res(ctx.status(404), ctx.json(response))
+  }),
+  rest.post('/api/attendance/settings/get', (_req, res, ctx) => {
+    const response: ApiResponse<AttendanceSettingsResponse> = {
+      code: 0,
+      msg: 'success',
+      data: attendanceSettings
+    }
+    return res(ctx.status(200), ctx.json(response))
+  }),
+  rest.post('/api/attendance/settings/save', async (req, res, ctx) => {
+    const body = await req.json()
+    const payload = body as {
+      monthly_limit: number
+      push_day: string
+      push_time: string
+      email: string
+    }
+    attendanceSettings = {
+      ...attendanceSettings,
+      monthly_limit: payload.monthly_limit,
+      push_day: payload.push_day,
+      push_time: payload.push_time,
+      email: payload.email
+    }
+    const response: ApiResponse<{ saved: boolean }> = { code: 0, msg: 'success', data: { saved: true } }
+    return res(ctx.status(200), ctx.json(response))
+  }),
+  rest.post('/api/attendance/records/query', async (req, res, ctx) => {
+    const body = await req.json()
+    const month = (body as { month?: string }).month || format(new Date(), 'yyyy-MM')
+    const records = attendanceRecords.filter(item => item.date.startsWith(month))
+    const response: ApiResponse<AttendanceRecordsQueryResp> = {
+      code: 0,
+      msg: 'success',
+      data: {
+        records,
+        summary: getAttendanceSummary(month)
+      }
+    }
+    return res(ctx.status(200), ctx.json(response))
+  }),
+  rest.post('/api/attendance/records/save', async (req, res, ctx) => {
+    const body = await req.json()
+    const payload = body as { date: string; type: 'in' | 'out'; note?: string }
+    const existing = attendanceRecords.find(
+      item => item.date === payload.date && item.type === payload.type
+    )
+    let recordId = ''
+    let updated = false
+    if (existing) {
+      existing.note = payload.note ?? ''
+      recordId = existing.id
+      updated = true
+    } else {
+      recordId = `attrec_${Date.now()}`
+      const created: AttendanceRecord = {
+        id: recordId,
+        date: payload.date,
+        type: payload.type,
+        note: payload.note ?? ''
+      }
+      attendanceRecords = [created, ...attendanceRecords]
+    }
+    const response: ApiResponse<AttendanceRecordSaveResp> = {
+      code: 0,
+      msg: 'success',
+      data: { id: recordId, updated }
+    }
+    return res(ctx.status(200), ctx.json(response))
+  }),
+  rest.post('/api/attendance/records/delete', async (req, res, ctx) => {
+    const body = await req.json()
+    const { id } = body as { id: string }
+    attendanceRecords = attendanceRecords.filter(item => item.id !== id)
+    const response: ApiResponse<{ deleted: boolean }> = {
+      code: 0,
+      msg: 'success',
+      data: { deleted: true }
+    }
+    return res(ctx.status(200), ctx.json(response))
   })
 ]

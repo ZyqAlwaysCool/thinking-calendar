@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, FileText, History, LayoutDashboard, Menu, Settings } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, FileText, History, LayoutDashboard, Menu, Settings } from 'lucide-react'
 import { NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogTrigger } from './ui/dialog'
 
 const navItems = [
   { href: '/today', label: NAV_LABELS.today, icon: CalendarDays },
+  { href: '/attendance', label: NAV_LABELS.attendance, icon: ClipboardCheck },
   { href: '/history', label: NAV_LABELS.history, icon: History },
   { href: '/dashboard', label: NAV_LABELS.dashboard, icon: LayoutDashboard },
   { href: '/reports', label: NAV_LABELS.reports, icon: FileText },
@@ -34,7 +35,7 @@ const DesktopSidebar = () => {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-gray-200 dark:hover:bg-gray-800',
+              'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-800',
               active
                 ? 'bg-gray-900 text-gray-50 dark:bg-gray-100 dark:text-gray-900'
                 : 'text-gray-700 dark:text-gray-200'
@@ -75,7 +76,7 @@ const MobileSidebar = () => {
             href={item.href}
             onClick={() => setOpen(false)}
             className={cn(
-              'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-gray-200 dark:hover:bg-gray-800',
+              'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-800',
               active
                 ? 'bg-gray-900 text-gray-50 dark:bg-gray-100 dark:text-gray-900'
                 : 'text-gray-700 dark:text-gray-200'
