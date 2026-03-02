@@ -194,3 +194,70 @@ func (h *AttendanceHandler) DeleteAttendanceRecord(ctx *gin.Context) {
 	}
 	v1.HandleSuccess(ctx, v1.AttendanceRecordDeleteResp{Deleted: true})
 }
+
+// QueryAttendancePushHistory godoc
+// @Summary 查询补卡推送历史
+// @Schemes
+// @Tags 补卡
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} v1.Response
+// @Router /attendance/push/history [post]
+func (h *AttendanceHandler) QueryAttendancePushHistory(ctx *gin.Context) {
+	userId := GetUserIdFromCtx(ctx)
+	if userId == "" {
+		v1.HandleError(ctx, http.StatusUnauthorized, v1.ErrUnauthorized, nil)
+		return
+	}
+
+	var req v1.AttendancePushHistoryQueryReq
+	if err := ctx.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
+		return
+	}
+
+	resp, err := h.attendanceService.QueryAttendancePushHistory(ctx, userId)
+	if err != nil {
+		v1.HandleError(ctx, http.StatusInternalServerError, err, nil)
+		return
+	}
+	v1.HandleSuccess(ctx, resp)
+}
+
+// TriggerAttendancePushManual godoc
+// @Summary 手动触发补卡推送
+// @Schemes
+// @Tags 补卡
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body v1.AttendancePushManualReq true "请求参数"
+// @Success 200 {object} v1.Response
+// @Router /attendance/push/manual [post]
+func (h *AttendanceHandler) TriggerAttendancePushManual(ctx *gin.Context) {
+	userId := GetUserIdFromCtx(ctx)
+	if userId == "" {
+		v1.HandleError(ctx, http.StatusUnauthorized, v1.ErrUnauthorized, nil)
+		return
+	}
+
+	var req v1.AttendancePushManualReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
+		return
+	}
+
+	resp, err := h.attendanceService.TriggerAttendancePushManual(ctx, userId, &req)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, v1.ErrAttendanceDateInvalid) ||
+			errors.Is(err, v1.ErrAttendanceEmailInvalid) ||
+			errors.Is(err, v1.ErrAttendanceNoRecords) {
+			status = http.StatusBadRequest
+		}
+		v1.HandleError(ctx, status, err, nil)
+		return
+	}
+	v1.HandleSuccess(ctx, resp)
+}

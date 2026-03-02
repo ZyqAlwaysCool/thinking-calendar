@@ -3,6 +3,8 @@ import { format, getISOWeek, parseISO } from 'date-fns'
 import raw from './data.json'
 import {
   type ApiResponse,
+  type AttendancePushHistoryResp,
+  type AttendancePushManualResp,
   type AttendanceRecord,
   type AttendanceRecordSaveResp,
   type AttendanceRecordsQueryResp,
@@ -36,6 +38,24 @@ let attendanceSettings: AttendanceSettingsResponse = rawAttendance.settings ?? {
   last_pushed_month: ''
 }
 let attendanceRecords: AttendanceRecord[] = rawAttendance.records ?? []
+type AttendancePushMeta = {
+  push_status: 'not_pushed' | 'pending' | 'sent' | 'failed'
+  send_at: string
+  sent_at: string
+  error_msg: string
+}
+let attendancePushMetaByMonth: Record<string, AttendancePushMeta> = {}
+if (attendanceSettings.last_pushed_month) {
+  const now = new Date().toISOString()
+  attendancePushMetaByMonth = {
+    [attendanceSettings.last_pushed_month]: {
+      push_status: 'sent',
+      send_at: now,
+      sent_at: now,
+      error_msg: ''
+    }
+  }
+}
 
 const getAttendanceSummary = (month: string): AttendanceRecordsQueryResp['summary'] => {
   const list = attendanceRecords.filter(item => item.date.startsWith(month))
@@ -44,6 +64,38 @@ const getAttendanceSummary = (month: string): AttendanceRecordsQueryResp['summar
     limit: attendanceSettings.monthly_limit ?? 0,
     locked: attendanceSettings.last_pushed_month === month
   }
+}
+
+const buildAttendanceHistory = (): AttendancePushHistoryResp['list'] => {
+  const monthMap = new Map<string, AttendanceRecord[]>()
+  attendanceRecords.forEach(record => {
+    const month = record.date.slice(0, 7)
+    const list = monthMap.get(month) || []
+    list.push(record)
+    monthMap.set(month, list)
+  })
+
+  return Array.from(monthMap.entries())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([month, records]) => {
+      const sortedRecords = [...records].sort((a, b) => (a.date < b.date ? -1 : 1))
+      const pushMeta = attendancePushMetaByMonth[month] || {
+        push_status: 'not_pushed',
+        send_at: '',
+        sent_at: '',
+        error_msg: ''
+      }
+      return {
+        month,
+        used: records.length,
+        limit: attendanceSettings.monthly_limit,
+        push_status: pushMeta.push_status,
+        send_at: pushMeta.send_at,
+        sent_at: pushMeta.sent_at,
+        error_msg: pushMeta.error_msg,
+        records: sortedRecords
+      }
+    })
 }
 
 export const handlers = [
@@ -227,6 +279,51 @@ export const handlers = [
       code: 0,
       msg: 'success',
       data: { deleted: true }
+    }
+    return res(ctx.status(200), ctx.json(response))
+  }),
+  rest.post('/api/attendance/push/history', (_req, res, ctx) => {
+    const response: ApiResponse<AttendancePushHistoryResp> = {
+      code: 0,
+      msg: 'success',
+      data: {
+        list: buildAttendanceHistory()
+      }
+    }
+    return res(ctx.status(200), ctx.json(response))
+  }),
+  rest.post('/api/attendance/push/manual', async (req, res, ctx) => {
+    const body = await req.json()
+    const month = ((body as { month?: string }).month || '').trim()
+    if (!month) {
+      const response: ApiResponse<null> = { code: 400, msg: '请求参数错误', data: null }
+      return res(ctx.status(400), ctx.json(response))
+    }
+    const hasRecords = attendanceRecords.some(item => item.date.startsWith(month))
+    if (!hasRecords) {
+      const response: ApiResponse<null> = { code: 5011, msg: '补卡记录为空，无法推送', data: null }
+      return res(ctx.status(400), ctx.json(response))
+    }
+    const now = new Date().toISOString()
+    attendancePushMetaByMonth[month] = {
+      push_status: 'sent',
+      send_at: now,
+      sent_at: now,
+      error_msg: ''
+    }
+    if (month === format(new Date(), 'yyyy-MM')) {
+      attendanceSettings = {
+        ...attendanceSettings,
+        last_pushed_month: month
+      }
+    }
+    const response: ApiResponse<AttendancePushManualResp> = {
+      code: 0,
+      msg: 'success',
+      data: {
+        triggered: true,
+        mail_id: `mail_${Date.now()}`
+      }
     }
     return res(ctx.status(200), ctx.json(response))
   })

@@ -23,12 +23,19 @@ const (
 	attendanceMonthLayout         = "2006-01"
 	attendanceTimeLayout          = "15:04"
 	attendanceRecordPrefix        = "attrec_"
+	attendanceMailBizType         = "attendance"
+	attendancePushStatusNotPushed = "not_pushed"
+	attendancePushStatusPending   = "pending"
+	attendancePushStatusSent      = "sent"
+	attendancePushStatusFailed    = "failed"
 )
 
 type AttendanceService interface {
 	GetAttendanceSettings(ctx context.Context, userId string) (*v1.AttendanceSettingsGetResp, error)
 	SaveAttendanceSettings(ctx context.Context, userId string, req *v1.AttendanceSettingsSaveReq) error
 	QueryAttendanceRecords(ctx context.Context, userId string, month string) (*v1.AttendanceRecordsQueryResp, error)
+	QueryAttendancePushHistory(ctx context.Context, userId string) (*v1.AttendancePushHistoryQueryResp, error)
+	TriggerAttendancePushManual(ctx context.Context, userId string, req *v1.AttendancePushManualReq) (*v1.AttendancePushManualResp, error)
 	SaveAttendanceRecord(ctx context.Context, userId string, req *v1.AttendanceRecordSaveReq) (*v1.AttendanceRecordSaveResp, error)
 	DeleteAttendanceRecord(ctx context.Context, userId string, recordId string) error
 	ProcessAttendancePush(ctx context.Context, now time.Time) error
@@ -145,6 +152,169 @@ func (s *attendanceService) QueryAttendanceRecords(ctx context.Context, userId s
 			Limit:  settings.MonthlyLimit,
 			Locked: settings.LastPushedMonth == normalizedMonth,
 		},
+	}, nil
+}
+
+// 查询补卡推送历史
+func (s *attendanceService) QueryAttendancePushHistory(ctx context.Context, userId string) (*v1.AttendancePushHistoryQueryResp, error) {
+	settings, err := s.getAttendanceSettingsOrDefault(ctx, userId)
+	if err != nil {
+		s.logger.Error("获取补卡设置失败", zap.String("user_id", userId), zap.Error(err))
+		return nil, v1.ErrAttendanceGetFailed
+	}
+
+	records, err := s.attendanceRepo.ListAttendanceRecords(ctx, userId)
+	if err != nil {
+		s.logger.Error("查询补卡历史失败", zap.String("user_id", userId), zap.Error(err))
+		return nil, v1.ErrAttendanceGetFailed
+	}
+
+	monthRecords := make(map[string][]v1.AttendanceRecordItem)
+	for _, record := range records {
+		if len(record.Date) < 7 {
+			continue
+		}
+		month := record.Date[:7]
+		monthRecords[month] = append(monthRecords[month], v1.AttendanceRecordItem{
+			Id:   record.ID,
+			Date: record.Date,
+			Type: record.Type,
+			Note: record.Note,
+		})
+	}
+
+	mailJobs, err := s.mailService.ListMailJobsByBiz(ctx, userId, attendanceMailBizType)
+	if err != nil {
+		s.logger.Error("查询补卡邮件历史失败", zap.String("user_id", userId), zap.Error(err))
+		return nil, v1.ErrAttendanceGetFailed
+	}
+	latestMailByMonth := make(map[string]*model.MailJob)
+	for _, job := range mailJobs {
+		month := strings.TrimSpace(job.BizMonth)
+		if month == "" {
+			continue
+		}
+		if _, existed := latestMailByMonth[month]; existed {
+			continue
+		}
+		latestMailByMonth[month] = job
+	}
+
+	months := make([]string, 0, len(monthRecords))
+	for month := range monthRecords {
+		months = append(months, month)
+	}
+	sort.Slice(months, func(i, j int) bool {
+		return months[i] > months[j]
+	})
+
+	list := make([]v1.AttendancePushHistoryItem, 0, len(months))
+	for _, month := range months {
+		items := monthRecords[month]
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].Date == items[j].Date {
+				return items[i].Type < items[j].Type
+			}
+			return items[i].Date < items[j].Date
+		})
+		pushStatus := attendancePushStatusNotPushed
+		sendAt := ""
+		sentAt := ""
+		errorMsg := ""
+		if latestMail, ok := latestMailByMonth[month]; ok {
+			pushStatus = normalizeAttendancePushStatus(latestMail.Status)
+			sendAt = latestMail.SendAt.Format(time.RFC3339)
+			if latestMail.SentAt != nil {
+				sentAt = latestMail.SentAt.Format(time.RFC3339)
+			}
+			errorMsg = latestMail.ErrorMsg
+		} else if settings.LastPushedMonth == month {
+			// 兼容历史数据：老任务没有业务月份字段时，最近一次推送月份视为成功
+			pushStatus = attendancePushStatusSent
+		}
+		list = append(list, v1.AttendancePushHistoryItem{
+			Month:      month,
+			Used:       len(items),
+			Limit:      settings.MonthlyLimit,
+			PushStatus: pushStatus,
+			SendAt:     sendAt,
+			SentAt:     sentAt,
+			ErrorMsg:   errorMsg,
+			Records:    items,
+		})
+	}
+
+	return &v1.AttendancePushHistoryQueryResp{
+		List: list,
+	}, nil
+}
+
+// 手动触发补卡推送
+func (s *attendanceService) TriggerAttendancePushManual(ctx context.Context, userId string, req *v1.AttendancePushManualReq) (*v1.AttendancePushManualResp, error) {
+	month := strings.TrimSpace(req.Month)
+	monthTime, err := parseAttendanceMonth(month)
+	if err != nil {
+		return nil, v1.ErrAttendanceDateInvalid
+	}
+	now := time.Now()
+	if monthTime.After(startOfMonth(now)) {
+		return nil, v1.ErrAttendanceDateInvalid
+	}
+	settings, err := s.getAttendanceSettingsOrDefault(ctx, userId)
+	if err != nil {
+		s.logger.Error("获取补卡设置失败", zap.String("user_id", userId), zap.Error(err))
+		return nil, v1.ErrAttendanceGetFailed
+	}
+	trimmedEmail := strings.TrimSpace(settings.Email)
+	if trimmedEmail == "" {
+		return nil, v1.ErrAttendanceEmailInvalid
+	}
+
+	start, end := monthRange(monthTime)
+	if end.After(now) {
+		end = now
+	}
+	records, err := s.attendanceRepo.ListAttendanceRecordsByRange(ctx, userId, start.Format(dateLayout), end.Format(dateLayout))
+	if err != nil {
+		s.logger.Error("查询补卡记录失败", zap.String("user_id", userId), zap.String("month", month), zap.Error(err))
+		return nil, v1.ErrAttendanceGetFailed
+	}
+	if len(records) == 0 {
+		return nil, v1.ErrAttendanceNoRecords
+	}
+
+	subject, content := buildAttendanceMailContent(month, settings.MonthlyLimit, records)
+	var mailID string
+	err = s.tm.Transaction(ctx, func(txCtx context.Context) error {
+		output, sendErr := s.mailService.Send(txCtx, MailSendInput{
+			To:          trimmedEmail,
+			Subject:     subject,
+			Content:     content,
+			ContentType: MailContentTypeText,
+			SendAt:      now,
+			UserID:      userId,
+			BizType:     attendanceMailBizType,
+			BizMonth:    month,
+		})
+		if sendErr != nil {
+			return sendErr
+		}
+		mailID = output.Id
+		if month == now.Format(attendanceMonthLayout) {
+			if updateErr := s.attendanceRepo.UpdateAttendanceLastPushedMonth(txCtx, userId, month); updateErr != nil {
+				return updateErr
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("手动触发补卡推送失败", zap.String("user_id", userId), zap.String("month", month), zap.Error(err))
+		return nil, v1.ErrAttendanceSaveFailed
+	}
+
+	return &v1.AttendancePushManualResp{
+		Triggered: true,
+		MailId:    mailID,
 	}, nil
 }
 
@@ -332,6 +502,9 @@ func (s *attendanceService) processAttendancePushWithSettings(ctx context.Contex
 			Content:     content,
 			ContentType: MailContentTypeText,
 			SendAt:      sendAt,
+			UserID:      userID,
+			BizType:     attendanceMailBizType,
+			BizMonth:    month,
 		})
 		if err != nil {
 			return err
@@ -481,4 +654,18 @@ func formatAttendanceType(recordType string) string {
 		return "下班"
 	}
 	return "上班"
+}
+
+func normalizeAttendancePushStatus(status string) string {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+	if normalized == MailStatusSent {
+		return attendancePushStatusSent
+	}
+	if normalized == MailStatusFailed {
+		return attendancePushStatusFailed
+	}
+	if normalized == MailStatusPending || normalized == MailStatusSending {
+		return attendancePushStatusPending
+	}
+	return attendancePushStatusNotPushed
 }

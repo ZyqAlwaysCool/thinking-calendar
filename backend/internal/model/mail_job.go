@@ -5,6 +5,9 @@ import "time"
 // 邮件任务
 type MailJob struct {
 	ID          string     `gorm:"primaryKey;size:32" json:"id"`                                            // 任务 ID
+	UserID      string     `gorm:"size:32;index:idx_mail_user_biz_month,priority:1" json:"user_id"`         // 业务用户 ID
+	BizType     string     `gorm:"size:32;index:idx_mail_user_biz_month,priority:2" json:"biz_type"`        // 业务类型
+	BizMonth    string     `gorm:"size:7;index:idx_mail_user_biz_month,priority:3" json:"biz_month"`        // 业务月份
 	To          string     `gorm:"size:128;not null" json:"to"`                                             // 收件邮箱
 	Subject     string     `gorm:"size:255;not null" json:"subject"`                                        // 邮件标题
 	Content     string     `gorm:"type:longtext" json:"content"`                                            // 邮件正文

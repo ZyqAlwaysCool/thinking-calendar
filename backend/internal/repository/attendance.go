@@ -20,6 +20,7 @@ type AttendanceRepository interface {
 	// 补卡记录
 	GetAttendanceRecordByID(ctx context.Context, userID string, recordID string) (*model.AttendanceRecord, error)
 	GetAttendanceRecordByKey(ctx context.Context, userID string, date string, recordType string) (*model.AttendanceRecord, error)
+	ListAttendanceRecords(ctx context.Context, userID string) ([]*model.AttendanceRecord, error)
 	ListAttendanceRecordsByRange(ctx context.Context, userID string, startDate string, endDate string) ([]*model.AttendanceRecord, error)
 	CountAttendanceRecordsByRange(ctx context.Context, userID string, startDate string, endDate string) (int64, error)
 	CreateAttendanceRecord(ctx context.Context, record *model.AttendanceRecord) error
@@ -119,6 +120,18 @@ func (r *attendanceRepository) GetAttendanceRecordByKey(ctx context.Context, use
 		return nil, err
 	}
 	return &record, nil
+}
+
+// 查询用户全部补卡记录
+func (r *attendanceRepository) ListAttendanceRecords(ctx context.Context, userID string) ([]*model.AttendanceRecord, error) {
+	var records []*model.AttendanceRecord
+	if err := r.DB(ctx).
+		Where("user_id = ?", userID).
+		Order("date desc, type asc").
+		Find(&records).Error; err != nil {
+		return nil, err
+	}
+	return records, nil
 }
 
 // 按时间范围查询补卡记录

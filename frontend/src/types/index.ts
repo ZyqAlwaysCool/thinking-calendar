@@ -85,6 +85,32 @@ export type AttendanceRecordSaveResp = {
   updated: boolean
 }
 
+export type AttendancePushStatus = 'not_pushed' | 'pending' | 'sent' | 'failed'
+
+export type AttendancePushHistoryItem = {
+  month: string
+  used: number
+  limit: number
+  push_status: AttendancePushStatus
+  send_at: string
+  sent_at: string
+  error_msg: string
+  records: AttendanceRecord[]
+}
+
+export type AttendancePushHistoryResp = {
+  list: AttendancePushHistoryItem[]
+}
+
+export type AttendancePushManualPayload = {
+  month: string
+}
+
+export type AttendancePushManualResp = {
+  triggered: boolean
+  mail_id: string
+}
+
 export type ApiResponse<T> = {
   code: number
   msg: string

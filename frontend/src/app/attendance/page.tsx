@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ATTENDANCE_OPTIONS, ATTENDANCE_TEXT, PAGE_TEXT } from '@/lib/constants'
-import { cn, formatDateLabel } from '@/lib/utils'
+import { cn, formatDateLabel, formatDateTime } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
 import { useAttendanceStore } from '@/stores/use-attendance-store'
 import { type AttendanceSettings, type AttendanceType } from '@/types'
@@ -39,13 +39,18 @@ const AttendancePage = () => {
     summary,
     loadingSettings,
     loadingRecords,
+    loadingHistory,
     savingSettings,
     savingRecord,
     deletingRecord,
+    pushingMonth,
     isEditing,
+    history,
     settingsSaved,
     fetchSettings,
     fetchRecords,
+    fetchHistory,
+    triggerManualPush,
     saveSettings,
     saveRecord,
     deleteRecord,
@@ -58,17 +63,19 @@ const AttendancePage = () => {
       try {
         await fetchSettings()
         await fetchRecords(currentMonth)
+        await fetchHistory()
       } catch {}
     }
     void load()
-  }, [fetchSettings, fetchRecords, currentMonth])
+  }, [fetchSettings, fetchRecords, fetchHistory, currentMonth])
 
   useEffect(() => {
+    if (loadingSettings) return
     if (!settingsLoaded || !isEditing) {
       setAttendanceSettings(settings)
       setSettingsLoaded(true)
     }
-  }, [settings, isEditing, settingsLoaded])
+  }, [settings, isEditing, settingsLoaded, loadingSettings])
 
   useEffect(() => {
     if (!isEditing) return
@@ -183,6 +190,33 @@ const AttendancePage = () => {
   const usageText = `${attendanceUsed}/${attendanceLimit}${ATTENDANCE_TEXT.countUnit}`
   const pageLoading = loadingSettings || loadingRecords
   const settingsDisabled = !isEditing || savingSettings
+  const pushStatusMap = {
+    not_pushed: ATTENDANCE_TEXT.pushStatusNotPushed,
+    pending: ATTENDANCE_TEXT.pushStatusPending,
+    sent: ATTENDANCE_TEXT.pushStatusSent,
+    failed: ATTENDANCE_TEXT.pushStatusFailed
+  }
+  const getPushStatusClassName = (status: string) => {
+    if (status === 'sent') {
+      return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300'
+    }
+    if (status === 'failed') {
+      return 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-300'
+    }
+    if (status === 'pending') {
+      return 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-300'
+    }
+    return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+  }
+
+  const handleManualPush = async (month: string) => {
+    try {
+      await triggerManualPush(month)
+      if (month === currentMonth) {
+        await fetchRecords(currentMonth, true)
+      }
+    } catch {}
+  }
 
   return (
     <PageShell>
@@ -210,7 +244,8 @@ const AttendancePage = () => {
             </Card>
           </div>
         ) : (
-          <div className="grid items-stretch gap-6 lg:grid-cols-[2fr,1fr]">
+          <>
+            <div className="grid items-stretch gap-6 lg:grid-cols-[2fr,1fr]">
             <Card className="flex h-full flex-col gap-4 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -539,7 +574,119 @@ const AttendancePage = () => {
                 </div>
               </div>
             </Card>
-          </div>
+            </div>
+
+            <Card className="space-y-4 p-4">
+              <div className="space-y-1">
+                <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+                  {ATTENDANCE_TEXT.historyTitle}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {ATTENDANCE_TEXT.historySubtitle}
+                </div>
+              </div>
+
+              {loadingHistory ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : history.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
+                  {ATTENDANCE_TEXT.historyEmpty}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {history.map(item => (
+                    <div
+                      key={item.month}
+                      className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {ATTENDANCE_TEXT.monthLabel}
+                          </div>
+                          <div className="text-base font-semibold text-gray-900 dark:text-gray-50">
+                            {item.month}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {ATTENDANCE_TEXT.monthUsageLabel}
+                          </div>
+                          <div className="text-base font-semibold text-gray-900 dark:text-gray-50">
+                            {item.used}/{item.limit}
+                            {ATTENDANCE_TEXT.countUnit}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {ATTENDANCE_TEXT.monthStatusLabel}
+                          </div>
+                          <div
+                            className={cn(
+                              'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                              getPushStatusClassName(item.push_status)
+                            )}
+                          >
+                            {pushStatusMap[item.push_status] || ATTENDANCE_TEXT.pushStatusNotPushed}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          disabled={pushingMonth === item.month}
+                          onClick={() => handleManualPush(item.month)}
+                          className="hover:scale-105 transition-all duration-200"
+                        >
+                          {pushingMonth === item.month ? ATTENDANCE_TEXT.pushingButton : ATTENDANCE_TEXT.pushNowButton}
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-2 text-sm text-gray-700 dark:text-gray-200 sm:grid-cols-3">
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {ATTENDANCE_TEXT.pushSendAtLabel}
+                          </div>
+                          <div>{item.send_at ? formatDateTime(item.send_at) : ATTENDANCE_TEXT.pushTimeEmpty}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {ATTENDANCE_TEXT.pushSentAtLabel}
+                          </div>
+                          <div>{item.sent_at ? formatDateTime(item.sent_at) : ATTENDANCE_TEXT.pushTimeEmpty}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {ATTENDANCE_TEXT.pushErrorLabel}
+                          </div>
+                          <div className="break-all">{item.error_msg || ATTENDANCE_TEXT.pushTimeEmpty}</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {ATTENDANCE_TEXT.monthRecordsLabel}
+                        </div>
+                        <div className="space-y-1">
+                          {item.records.map(record => (
+                            <div
+                              key={record.id}
+                              className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700 dark:bg-gray-950 dark:text-gray-200"
+                            >
+                              <div>{formatDateLabel(record.date)}</div>
+                              <div>{record.type === 'in' ? ATTENDANCE_TEXT.typeIn : ATTENDANCE_TEXT.typeOut}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
         )}
       </div>
     </PageShell>

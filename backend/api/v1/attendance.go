@@ -86,3 +86,35 @@ type AttendanceRecordDeleteReq struct {
 type AttendanceRecordDeleteResp struct {
 	Deleted bool `json:"deleted"` // 是否删除成功
 }
+
+// 查询补卡推送历史请求
+type AttendancePushHistoryQueryReq struct {
+}
+
+// 查询补卡推送历史响应
+type AttendancePushHistoryQueryResp struct {
+	List []AttendancePushHistoryItem `json:"list"` // 历史记录
+}
+
+// 补卡推送历史项
+type AttendancePushHistoryItem struct {
+	Month      string                 `json:"month" example:"2026-02"`                     // 月份
+	Used       int                    `json:"used" example:"4"`                            // 补卡次数
+	Limit      int                    `json:"limit" example:"8"`                           // 上限次数
+	PushStatus string                 `json:"push_status" example:"sent"`                  // 推送状态
+	SendAt     string                 `json:"send_at" example:"2026-02-28T09:00:00+08:00"` // 计划发送时间
+	SentAt     string                 `json:"sent_at" example:"2026-02-28T09:00:06+08:00"` // 实际发送时间
+	ErrorMsg   string                 `json:"error_msg" example:""`                        // 失败原因
+	Records    []AttendanceRecordItem `json:"records"`                                     // 当月补卡记录
+}
+
+// 手动触发补卡推送请求
+type AttendancePushManualReq struct {
+	Month string `json:"month" binding:"required" example:"2026-02"` // 月份
+}
+
+// 手动触发补卡推送响应
+type AttendancePushManualResp struct {
+	Triggered bool   `json:"triggered"` // 是否触发成功
+	MailId    string `json:"mail_id"`   // 邮件任务 ID
+}

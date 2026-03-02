@@ -17,5 +17,7 @@ func InitAttendanceRouter(
 		strictAuthRouter.POST("/attendance/records/query", deps.AttendanceHandler.QueryAttendanceRecords)
 		strictAuthRouter.POST("/attendance/records/save", deps.AttendanceHandler.SaveAttendanceRecord)
 		strictAuthRouter.POST("/attendance/records/delete", deps.AttendanceHandler.DeleteAttendanceRecord)
+		strictAuthRouter.POST("/attendance/push/history", deps.AttendanceHandler.QueryAttendancePushHistory)
+		strictAuthRouter.POST("/attendance/push/manual", deps.AttendanceHandler.TriggerAttendancePushManual)
 	}
 }

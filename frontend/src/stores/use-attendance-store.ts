@@ -5,6 +5,9 @@ import { api, extractErrorMessage } from '@/lib/api'
 import { ATTENDANCE_TEXT } from '@/lib/constants'
 import {
   type ApiResponse,
+  type AttendancePushHistoryItem,
+  type AttendancePushHistoryResp,
+  type AttendancePushManualResp,
   type AttendanceRecord,
   type AttendanceRecordSavePayload,
   type AttendanceRecordSaveResp,
@@ -19,16 +22,21 @@ type AttendanceState = {
   settings: AttendanceSettings
   records: AttendanceRecord[]
   summary: AttendanceSummary
+  history: AttendancePushHistoryItem[]
   month: string
   loadingSettings: boolean
   loadingRecords: boolean
+  loadingHistory: boolean
   savingSettings: boolean
   savingRecord: boolean
   deletingRecord: boolean
+  pushingMonth: string
   isEditing: boolean
   settingsSaved: boolean
   fetchSettings: () => Promise<void>
   fetchRecords: (month: string, silent?: boolean) => Promise<void>
+  fetchHistory: () => Promise<void>
+  triggerManualPush: (month: string) => Promise<boolean>
   saveSettings: (payload: AttendanceSettingsSavePayload) => Promise<boolean>
   saveRecord: (payload: AttendanceRecordSavePayload) => Promise<boolean>
   deleteRecord: (recordId: string) => Promise<boolean>
@@ -62,12 +70,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   settings: defaultSettings,
   records: [],
   summary: defaultSummary,
+  history: [],
   month: format(new Date(), 'yyyy-MM'),
   loadingSettings: true,
   loadingRecords: true,
+  loadingHistory: true,
   savingSettings: false,
   savingRecord: false,
   deletingRecord: false,
+  pushingMonth: '',
   isEditing: true,
   settingsSaved: false,
   fetchSettings: async () => {
@@ -81,6 +92,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
           ...state.summary,
           limit: nextSettings.monthlyLimit
         },
+        isEditing: nextSettings.email.trim() === '',
         loadingSettings: false
       }))
     } catch (error) {
@@ -106,6 +118,34 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         set({ loadingRecords: false })
       }
       toast.error(extractErrorMessage(error, ATTENDANCE_TEXT.loadFail))
+    }
+  },
+  fetchHistory: async () => {
+    set({ loadingHistory: true })
+    try {
+      const res = await api.post<ApiResponse<AttendancePushHistoryResp>>('/attendance/push/history', {})
+      const list = res.data.data?.list || []
+      set({
+        history: list,
+        loadingHistory: false
+      })
+    } catch (error) {
+      set({ loadingHistory: false })
+      toast.error(extractErrorMessage(error, ATTENDANCE_TEXT.loadFail))
+    }
+  },
+  triggerManualPush: async (month: string) => {
+    set({ pushingMonth: month })
+    try {
+      await api.post<ApiResponse<AttendancePushManualResp>>('/attendance/push/manual', { month })
+      await get().fetchHistory()
+      set({ pushingMonth: '' })
+      toast.success(ATTENDANCE_TEXT.pushManualSuccess)
+      return true
+    } catch (error) {
+      set({ pushingMonth: '' })
+      toast.error(extractErrorMessage(error, ATTENDANCE_TEXT.pushManualFail))
+      return false
     }
   },
   saveSettings: async (payload: AttendanceSettingsSavePayload) => {
@@ -151,6 +191,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       })
       const targetMonth = get().month || format(new Date(), 'yyyy-MM')
       await get().fetchRecords(targetMonth, true)
+      await get().fetchHistory()
       set({ savingRecord: false })
       toast.success(ATTENDANCE_TEXT.recordSaveSuccess)
       return true
@@ -166,6 +207,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       await api.post<ApiResponse<unknown>>('/attendance/records/delete', { id: recordId })
       const targetMonth = get().month || format(new Date(), 'yyyy-MM')
       await get().fetchRecords(targetMonth, true)
+      await get().fetchHistory()
       set({ deletingRecord: false })
       toast.success(ATTENDANCE_TEXT.recordDeleteSuccess)
       return true

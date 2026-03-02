@@ -62,4 +62,5 @@ var (
 	ErrAttendanceSaveFailed      = newError(5008, "保存补卡数据失败")
 	ErrAttendanceDeleteFailed    = newError(5009, "删除补卡数据失败")
 	ErrAttendanceRecordNotExist  = newError(5010, "补卡记录不存在")
+	ErrAttendanceNoRecords       = newError(5011, "补卡记录为空，无法推送")
 )

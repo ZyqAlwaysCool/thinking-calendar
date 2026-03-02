@@ -39,6 +39,9 @@ type MailSendInput struct {
 	Content     string
 	ContentType string
 	SendAt      time.Time
+	UserID      string
+	BizType     string
+	BizMonth    string
 }
 
 type MailSendOutput struct {
@@ -49,6 +52,7 @@ type MailSendOutput struct {
 type MailService interface {
 	Send(ctx context.Context, input MailSendInput) (*MailSendOutput, error)
 	ProcessPending(ctx context.Context, now time.Time) error
+	ListMailJobsByBiz(ctx context.Context, userID string, bizType string) ([]*model.MailJob, error)
 }
 
 type smtpConfig struct {
@@ -101,6 +105,9 @@ func (s *mailService) Send(ctx context.Context, input MailSendInput) (*MailSendO
 	}
 	job := &model.MailJob{
 		ID:          "mail_" + jobID,
+		UserID:      strings.TrimSpace(input.UserID),
+		BizType:     strings.TrimSpace(input.BizType),
+		BizMonth:    strings.TrimSpace(input.BizMonth),
 		To:          strings.TrimSpace(input.To),
 		Subject:     input.Subject,
 		Content:     input.Content,
@@ -146,6 +153,19 @@ func (s *mailService) ProcessPending(ctx context.Context, now time.Time) error {
 		}
 	}
 	return nil
+}
+
+// 按业务维度查询邮件任务
+func (s *mailService) ListMailJobsByBiz(ctx context.Context, userID string, bizType string) ([]*model.MailJob, error) {
+	if strings.TrimSpace(userID) == "" || strings.TrimSpace(bizType) == "" {
+		return []*model.MailJob{}, nil
+	}
+	jobs, err := s.mailRepo.ListMailJobsByUserAndBizType(ctx, userID, bizType)
+	if err != nil {
+		s.logger.Error("查询业务邮件任务失败", zap.String("user_id", userID), zap.String("biz_type", bizType), zap.Error(err))
+		return nil, err
+	}
+	return jobs, nil
 }
 
 func (s *mailService) sendSMTP(job *model.MailJob, cfg smtpConfig) error {

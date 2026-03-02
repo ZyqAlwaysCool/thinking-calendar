@@ -9,6 +9,7 @@ import (
 type MailRepository interface {
 	CreateMailJob(ctx context.Context, job *model.MailJob) error
 	ListMailJobsByStatus(ctx context.Context, status string, now time.Time, limit int) ([]*model.MailJob, error)
+	ListMailJobsByUserAndBizType(ctx context.Context, userID string, bizType string) ([]*model.MailJob, error)
 	UpdateMailJobStatus(ctx context.Context, id string, status string, sentAt *time.Time, errorMsg string) error
 	UpdateMailJobStatusIf(ctx context.Context, id string, fromStatus string, toStatus string) (bool, error)
 }
@@ -39,6 +40,18 @@ func (r *mailRepository) ListMailJobsByStatus(ctx context.Context, status string
 		query = query.Limit(limit)
 	}
 	if err := query.Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+// 按用户与业务类型查询邮件任务
+func (r *mailRepository) ListMailJobsByUserAndBizType(ctx context.Context, userID string, bizType string) ([]*model.MailJob, error) {
+	var jobs []*model.MailJob
+	if err := r.DB(ctx).
+		Where("user_id = ? AND biz_type = ?", userID, bizType).
+		Order("created_at desc").
+		Find(&jobs).Error; err != nil {
 		return nil, err
 	}
 	return jobs, nil

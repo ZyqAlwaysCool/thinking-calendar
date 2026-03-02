@@ -1,4 +1,13 @@
 definitions:
+  v1.AttendancePushManualReq:
+    properties:
+      month:
+        description: 月份
+        example: 2026-02
+        type: string
+    required:
+    - month
+    type: object
   v1.AttendanceRecordDeleteReq:
     properties:
       id:
@@ -196,6 +205,45 @@ info:
   title: thinking calendar API
   version: 1.0.0
 paths:
+  /attendance/push/history:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 查询补卡推送历史
+      tags:
+      - 补卡
+  /attendance/push/manual:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AttendancePushManualReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Response'
+      security:
+      - Bearer: []
+      summary: 手动触发补卡推送
+      tags:
+      - 补卡
   /attendance/records/delete:
     post:
       consumes:
