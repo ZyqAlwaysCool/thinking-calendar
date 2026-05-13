@@ -13,6 +13,7 @@ import (
 	"backend/internal/middleware"
 	"backend/internal/router"
 	"backend/pkg/server/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
@@ -43,9 +44,9 @@ func NewHTTPServer(
 
 	s.Use(
 		middleware.CORSMiddleware(),
+		middleware.RateLimitMiddleware(100, time.Minute),
 		middleware.ResponseLogMiddleware(deps.Logger),
 		middleware.RequestLogMiddleware(deps.Logger),
-		//middleware.SignMiddleware(log),
 	)
 	s.GET("/", func(ctx *gin.Context) {
 		deps.Logger.WithContext(ctx).Info("hello")

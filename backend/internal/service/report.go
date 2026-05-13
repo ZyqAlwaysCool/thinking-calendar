@@ -25,10 +25,12 @@ import (
 type ReportService interface {
 	GenerateReport(ctx context.Context, userId string, req *v1.GenReportReq) (string, error)
 	GetReportByID(ctx context.Context, userId string, reportID string) (v1.ReportItem, error)
-	GetReports(ctx context.Context, userId string, req *v1.GetReportsReq) ([]v1.ReportItem, error)
+	GetReports(ctx context.Context, userId string, req *v1.GetReportsReq) ([]v1.ReportItem, int64, error)
 	EditReport(ctx context.Context, userId string, req *v1.EditReportReq) error
 	ConfirmReport(ctx context.Context, userId string, req *v1.ConfirmReportReq) error
+	RefineReport(ctx context.Context, userId string, req *v1.RefineReportReq) (string, error)
 	ProcessReport(ctx context.Context, reportID string, genVersion int) error
+	ProcessRefineReport(ctx context.Context, reportID string, genVersion int) error
 	ProcessQueuedReports(ctx context.Context, limit int) (int, error)
 }
 
@@ -158,27 +160,42 @@ func (s *reportService) GetReportByID(ctx context.Context, userId string, report
 	return s.toReportItem(report), nil
 }
 
-func (s *reportService) GetReports(ctx context.Context, userId string, req *v1.GetReportsReq) ([]v1.ReportItem, error) {
+func (s *reportService) GetReports(ctx context.Context, userId string, req *v1.GetReportsReq) ([]v1.ReportItem, int64, error) {
 	var reports []*model.Report
+	var total int64
 	var err error
 
+	pageSize := req.PageSize
+	if req.Page < 1 {
+		req.Page = 0 // 不分页
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
 	if req.PeriodType == "" {
-		return nil, v1.ErrInvalidReportPeriod
+		return nil, 0, v1.ErrInvalidReportPeriod
 	} else if req.StartDate != "" && req.EndDate != "" {
 		reports, err = s.reportRepo.GetByDateRange(ctx, userId, req.PeriodType, req.StartDate, req.EndDate)
+		total = int64(len(reports))
 	} else {
-		reports, err = s.reportRepo.GetByPeriodType(ctx, userId, req.PeriodType)
+		if req.Page > 0 {
+			reports, total, err = s.reportRepo.GetByPeriodTypePaginated(ctx, userId, req.PeriodType, req.Page, pageSize)
+		} else {
+			reports, err = s.reportRepo.GetByPeriodType(ctx, userId, req.PeriodType)
+			total = int64(len(reports))
+		}
 	}
 	if err != nil && !errors.Is(err, v1.ErrNotFound) {
 		s.logger.Error("list reports failed", zap.String("user_id", userId), zap.Error(err))
-		return nil, v1.ErrGetReportsFailed
+		return nil, 0, v1.ErrGetReportsFailed
 	}
 
 	items := make([]v1.ReportItem, 0, len(reports))
 	for _, report := range reports {
 		items = append(items, s.toReportItem(report))
 	}
-	return items, nil
+	return items, total, nil
 }
 
 func (s *reportService) EditReport(ctx context.Context, userId string, req *v1.EditReportReq) error {
@@ -221,6 +238,133 @@ func (s *reportService) ConfirmReport(ctx context.Context, userId string, req *v
 		return v1.ErrUpdateReportFailed
 	}
 	return nil
+}
+
+func (s *reportService) RefineReport(ctx context.Context, userId string, req *v1.RefineReportReq) (string, error) {
+	report, err := s.reportRepo.GetByID(ctx, userId, req.ReportID)
+	if err != nil {
+		if errors.Is(err, v1.ErrNotFound) {
+			return "", v1.ErrReportNotExist
+		}
+		s.logger.Error("get report for refine failed", zap.String("user_id", userId), zap.String("report_id", req.ReportID), zap.Error(err))
+		return "", v1.ErrGetReportsFailed
+	}
+	if report.Status != string(v1.ReportStatusReady) {
+		return "", v1.ErrReportNotReady
+	}
+	feedback := strings.TrimSpace(req.Feedback)
+	if len(feedback) < 2 {
+		return "", v1.ErrInvalidFeedback
+	}
+
+	if report.Meta == nil {
+		report.Meta = make(map[string]interface{})
+	}
+	if _, ok := report.Meta["records_context"]; !ok {
+		return "", v1.ErrReportNotRefineable
+	}
+
+	history, _ := report.Meta["refine_history"].([]interface{})
+	history = append(history, map[string]interface{}{
+		"feedback":  feedback,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+	report.Meta["refine_history"] = history
+
+	report.GenVersion++
+	report.Status = string(v1.ReportStatusRefineQueued)
+	report.Confirmed = false
+	report.FailedReason = ""
+
+	if err := s.reportRepo.Update(ctx, report); err != nil {
+		s.logger.Error("update report for refine failed", zap.String("user_id", userId), zap.String("report_id", req.ReportID), zap.Error(err))
+		return "", v1.ErrUpdateReportFailed
+	}
+	return report.ReportID, nil
+}
+
+func (s *reportService) ProcessRefineReport(ctx context.Context, reportID string, genVersion int) error {
+	claimed, err := s.reportRepo.TryMarkRefineProcessing(ctx, reportID, genVersion)
+	if err != nil {
+		return err
+	}
+	if !claimed {
+		return nil
+	}
+
+	report, err := s.reportRepo.GetByReportID(ctx, reportID)
+	if err != nil {
+		return err
+	}
+	if report.GenVersion != genVersion {
+		return nil
+	}
+
+	if report.Meta == nil {
+		if updateErr := s.reportRepo.UpdateFailed(ctx, reportID, genVersion, "缺少上下文信息"); updateErr != nil {
+			s.logger.Error("mark refine report failed error", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
+		}
+		return errors.New("meta is nil")
+	}
+
+	recordsContext, _ := report.Meta["records_context"].(string)
+	if recordsContext == "" {
+		if updateErr := s.reportRepo.UpdateFailed(ctx, reportID, genVersion, "缺少原始记录上下文"); updateErr != nil {
+			s.logger.Error("mark refine report failed error", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
+		}
+		return errors.New("records_context missing")
+	}
+
+	systemPrompt := s.pickSystemPrompt(report.PeriodType, report.Template, nil)
+	userPrompt := s.buildRefineUserPrompt(recordsContext, report.Content, report.Meta)
+
+	content, abstract, err := s.callModel(ctx, systemPrompt, userPrompt)
+	if err != nil {
+		if updateErr := s.reportRepo.UpdateFailed(ctx, reportID, genVersion, "优化失败"); updateErr != nil {
+			s.logger.Error("mark refine report failed error", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(updateErr))
+		}
+		s.logger.Error("call model for refine failed", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(err))
+		return v1.ErrCallLLMFailed
+	}
+
+	if err := s.reportRepo.UpdateGenerated(ctx, reportID, genVersion, content, abstract); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *reportService) buildRefineUserPrompt(recordsContext string, previousContent string, meta map[string]interface{}) string {
+	var builder strings.Builder
+
+	builder.WriteString("## 原始工作记录\n")
+	builder.WriteString(recordsContext)
+	builder.WriteString("\n\n## 上一次生成的报告\n")
+	if previousContent != "" {
+		builder.WriteString(previousContent)
+	} else {
+		builder.WriteString("（无上一版本）")
+	}
+
+	history, _ := meta["refine_history"].([]interface{})
+	lastFeedback := ""
+	if len(history) > 0 {
+		if lastEntry, ok := history[len(history)-1].(map[string]interface{}); ok {
+			if fb, ok := lastEntry["feedback"].(string); ok {
+				lastFeedback = fb
+			}
+		}
+	}
+
+	builder.WriteString("\n\n## 用户反馈意见\n")
+	builder.WriteString(lastFeedback)
+	builder.WriteString("\n\n请根据原始工作记录和用户反馈，对上一版本报告进行修改。要求：\n")
+	builder.WriteString("1. 保持报告整体结构和风格一致\n")
+	builder.WriteString("2. 仅根据用户反馈进行调整，不要改动未提及的部分\n")
+	builder.WriteString("3. 如果反馈涉及具体内容修改，请精确定位修改\n")
+	builder.WriteString("4. 输出完整的 Markdown 报告，不要只输出修改部分\n")
+	builder.WriteString("5. 不要使用 ``` 代码块包裹，不要输出额外解释\n")
+
+	return builder.String()
 }
 
 func (s *reportService) ProcessQueuedReports(ctx context.Context, limit int) (int, error) {
@@ -290,6 +434,15 @@ func (s *reportService) ProcessReport(ctx context.Context, reportID string, genV
 	}
 
 	prompt := s.buildUserPrompt(report.PeriodType, report.Template, userSettings, records, report.Title)
+
+	// 保存原始记录上下文用于后续反馈优化
+	if report.Meta == nil {
+		report.Meta = make(map[string]interface{})
+	}
+	report.Meta["records_context"] = prompt.user
+	if err := s.reportRepo.UpdateMeta(ctx, reportID, genVersion, report.Meta); err != nil {
+		s.logger.Error("save records context failed", zap.String("report_id", reportID), zap.Int("gen_version", genVersion), zap.Error(err))
+	}
 
 	content, abstract, err := s.callModel(ctx, prompt.system, prompt.user)
 	if err != nil {
@@ -425,6 +578,16 @@ func (s *reportService) processYearReport(ctx context.Context, report *model.Rep
 	// 组合年报提示词并调用模型生成「正文 + 结构化摘要」
 	userPrompt := buildYearPrompt(report.StartDate, report.EndDate, materials)
 	systemPrompt := s.pickSystemPrompt(string(v1.ReportPeriodYear), string(v1.ReportTemplateFormal), nil)
+
+	// 保存原始记录上下文用于后续反馈优化
+	if report.Meta == nil {
+		report.Meta = make(map[string]interface{})
+	}
+	report.Meta["records_context"] = userPrompt
+	if err := s.reportRepo.UpdateMeta(ctx, report.ReportID, genVersion, report.Meta); err != nil {
+		s.logger.Error("save year records context failed", zap.String("report_id", report.ReportID), zap.Int("gen_version", genVersion), zap.Error(err))
+	}
+
 	content, abstract, err := s.callModel(ctx, systemPrompt, userPrompt)
 	if err != nil {
 		if updateErr := s.reportRepo.UpdateFailed(ctx, report.ReportID, genVersion, "生成失败"); updateErr != nil {

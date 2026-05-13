@@ -96,7 +96,9 @@ func NewDB(conf *viper.Viper, l *log.Logger) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	db = db.Debug()
+	if conf.GetString("env") != "prod" {
+		db = db.Debug()
+	}
 
 	// Connection Pool config
 	sqlDB, err := db.DB()

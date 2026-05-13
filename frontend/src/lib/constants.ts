@@ -91,7 +91,14 @@ export const PAGE_TEXT = {
   settingsEdit: '编辑模板',
   settingsSave: '保存模板',
   settingsLoadFail: '加载设置失败',
-  settingsSaveFail: '保存设置失败'
+  settingsSaveFail: '保存设置失败',
+  refineToggle: 'AI 优化',
+  refineToggleCollapse: '收起反馈',
+  refinePlaceholder: '输入优化建议，如"精简到300字"、"补充更多细节"、"第三条关于风险的表述有问题"...',
+  refineReport: '发送反馈优化',
+  refining: '优化中…',
+  refineSuccess: '优化成功',
+  refineFail: '优化失败'
 }
 
 export const ATTENDANCE_TEXT = {

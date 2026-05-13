@@ -28,6 +28,7 @@ const (
 type UserService interface {
 	Register(ctx context.Context, req *v1.RegisterReq) error
 	Login(ctx context.Context, req *v1.LoginReq) (v1.LoginRespData, error)
+	RefreshToken(ctx context.Context, refreshToken string) (v1.RefreshTokenRespData, error)
 	GetUserSettings(ctx context.Context, userId string) (*v1.UserSettings, error)
 	UpdateUserSettings(ctx context.Context, userId string, req *v1.UpdateUserSettingsReq) error
 	GetUserInfo(ctx context.Context, userId string) (*v1.UserInfo, error)
@@ -121,19 +122,47 @@ func (s *userService) Login(ctx context.Context, req *v1.LoginReq) (v1.LoginResp
 		s.logger.Error("compare password failed.", zap.String("username", req.Username))
 		return resp, v1.ErrInvalidPassword
 	}
-	tokenExpiredAt := time.Now().Add(time.Hour * 24 * 1) //token有效期为1天
+	now := time.Now()
+	tokenExpiredAt := now.Add(time.Hour * 24 * 1)         // access_token 有效期 1 天
+	refreshExpiredAt := now.Add(time.Hour * 24 * 7)       // refresh_token 有效期 7 天
+
 	token, err := s.jwt.GenToken(user.UserID, tokenExpiredAt)
 	if err != nil {
 		s.logger.Error("gen token failed.", zap.String("user_id", user.UserID), zap.Error(err))
 		return resp, v1.ErrJWTGenFailed
 	}
+	refreshToken, err := s.jwt.GenToken(user.UserID, refreshExpiredAt)
+	if err != nil {
+		s.logger.Error("gen refresh token failed.", zap.String("user_id", user.UserID), zap.Error(err))
+		return resp, v1.ErrJWTGenFailed
+	}
 
 	//update last_login_time
-	now := time.Now()
 	if err = s.userRepo.UpdateLastLoginAt(ctx, user.UserID, &now); err != nil {
 		s.logger.Error("update last login time failed.", zap.String("user_id", user.UserID))
 	}
 
+	resp.AccessToken = token
+	resp.ExpireAt = tokenExpiredAt.Format(time.RFC3339)
+	resp.RefreshToken = refreshToken
+	resp.RefreshExpireAt = refreshExpiredAt.Format(time.RFC3339)
+	return resp, nil
+}
+
+func (s *userService) RefreshToken(ctx context.Context, refreshToken string) (v1.RefreshTokenRespData, error) {
+	resp := v1.RefreshTokenRespData{}
+	claims, err := s.jwt.ParseToken(refreshToken)
+	if err != nil {
+		s.logger.Error("parse refresh token failed.", zap.Error(err))
+		return resp, v1.ErrUnauthorized
+	}
+	now := time.Now()
+	tokenExpiredAt := now.Add(time.Hour * 24 * 1)
+	token, err := s.jwt.GenToken(claims.UserId, tokenExpiredAt)
+	if err != nil {
+		s.logger.Error("gen token failed.", zap.String("user_id", claims.UserId), zap.Error(err))
+		return resp, v1.ErrJWTGenFailed
+	}
 	resp.AccessToken = token
 	resp.ExpireAt = tokenExpiredAt.Format(time.RFC3339)
 	return resp, nil

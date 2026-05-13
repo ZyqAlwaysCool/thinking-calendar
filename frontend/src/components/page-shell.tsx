@@ -58,7 +58,7 @@ export const PageShell = ({ children }: Props) => (
 
 const ProtectedShell = ({ children }: Props) => {
   const router = useRouter()
-  const { user, initializing, restoreSession, logout, refreshToken, username, password } = useAuthStore()
+  const { user, initializing, restoreSession, logout, refreshAccessToken, refreshToken } = useAuthStore()
 
   useEffect(() => {
     void restoreSession()
@@ -67,18 +67,18 @@ const ProtectedShell = ({ children }: Props) => {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handler = () => {
-      if (!username || !password) {
+      if (!refreshToken) {
         logout()
         router.replace('/')
         return
       }
-      void refreshToken()
+      void refreshAccessToken()
     }
     window.addEventListener('auth:unauthorized', handler)
     return () => {
       window.removeEventListener('auth:unauthorized', handler)
     }
-  }, [logout, router, refreshToken, username, password])
+  }, [logout, router, refreshAccessToken, refreshToken])
 
   useEffect(() => {
     if (!initializing && !user) {

@@ -77,6 +77,31 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	v1.HandleSuccess(ctx, loginResp)
 }
 
+// RefreshToken godoc
+// @Summary 刷新 token
+// @Schemes
+// @Description 使用 refresh_token 换取新的 access_token
+// @Tags 用户模块
+// @Accept json
+// @Produce json
+// @Param request body v1.RefreshTokenReq true "params"
+// @Success 200 {object} v1.Response
+// @Router /refresh [post]
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	var req v1.RefreshTokenReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
+		return
+	}
+
+	resp, err := h.userService.RefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		v1.HandleError(ctx, http.StatusUnauthorized, err, nil)
+		return
+	}
+	v1.HandleSuccess(ctx, resp)
+}
+
 // GetProfile godoc
 // @Summary 获取当前用户信息
 // @Schemes

@@ -22,6 +22,7 @@ func InitReportRouter(
 		strictAuthRouter.GET("/reports", deps.ReportHandler.GetReports)
 		strictAuthRouter.GET("/reports/:report_id", deps.ReportHandler.GetReportByID)
 		strictAuthRouter.POST("/reports/generate", deps.ReportHandler.GenerateReport)
+		strictAuthRouter.POST("/reports/refine", deps.ReportHandler.RefineReport)
 		strictAuthRouter.POST("/reports/edit", deps.ReportHandler.EditReport)
 		strictAuthRouter.POST("/reports/confirm", deps.ReportHandler.ConfirmReport)
 	}

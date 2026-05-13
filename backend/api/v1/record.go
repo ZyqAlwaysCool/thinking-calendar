@@ -19,11 +19,14 @@ type RecordItem struct {
 
 // QueryRecordsReq 查询工作记录请求
 type QueryRecordsReq struct {
-	Date string `form:"date" example:"2025-12-11"` // 不传则返回当前用户全部记录
+	Date     string `form:"date" example:"2025-12-11"`       // 不传则返回当前用户全部记录
+	Page     int    `form:"page" example:"1"`                 // 页码，从 1 开始（仅 date 为空时生效）
+	PageSize int    `form:"page_size" example:"20"`           // 每页条数（仅 date 为空时生效）
 }
 
 type RecordListResp struct {
 	RecordList []RecordItem `json:"record_list"` // 不传date时返回全部记录
+	Total      int64        `json:"total"`       // 总记录数
 }
 
 // RangeRecordsReq 时间范围批量查询请求

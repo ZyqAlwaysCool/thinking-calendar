@@ -22,5 +22,6 @@ func getConfig(path string) *viper.Viper {
 	if err != nil {
 		panic(err)
 	}
+	conf.AutomaticEnv()
 	return conf
 }

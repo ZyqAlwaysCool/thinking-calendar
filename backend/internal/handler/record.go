@@ -59,6 +59,16 @@ func (h *RecordHandler) QueryRecords(ctx *gin.Context) {
 		return
 	}
 
+	if req.Page > 0 {
+		records, total, err := h.recordService.GetAllUserRecordsPaginated(ctx, userId, req.Page, req.PageSize)
+		if err != nil {
+			v1.HandleError(ctx, http.StatusInternalServerError, err, nil)
+			return
+		}
+		v1.HandleSuccess(ctx, v1.RecordListResp{RecordList: records, Total: total})
+		return
+	}
+
 	records, err := h.recordService.GetAllUserRecords(ctx, userId)
 	if err != nil {
 		v1.HandleError(ctx, http.StatusInternalServerError, err, nil)

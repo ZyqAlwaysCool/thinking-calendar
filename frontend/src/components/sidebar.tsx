@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, ClipboardCheck, FileText, History, LayoutDashboard, Menu, Settings } from 'lucide-react'
-import { NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
+import { CalendarDays, ClipboardCheck, FileText, History, LayoutDashboard, Menu, Moon, Settings, Sun } from 'lucide-react'
+import { NAV_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useDarkMode } from '@/app/providers'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog'
 
@@ -20,6 +21,7 @@ const navItems = [
 
 const DesktopSidebar = () => {
   const pathname = usePathname()
+  const { dark, toggle } = useDarkMode()
   return (
     <aside
       className="fixed left-0 top-0 hidden h-screen flex-col border-r border-gray-200 bg-gray-100 px-6 py-8 dark:border-gray-800 dark:bg-gray-900 lg:flex"
@@ -47,6 +49,15 @@ const DesktopSidebar = () => {
           )
         })}
       </nav>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={toggle}
+        className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+      >
+        {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        <span>{dark ? '亮色模式' : '暗黑模式'}</span>
+      </Button>
     </aside>
   )
 }
@@ -54,6 +65,7 @@ const DesktopSidebar = () => {
 const MobileSidebar = () => {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const { dark, toggle } = useDarkMode()
   return (
     <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-gray-100 px-4 py-3 dark:border-gray-800 dark:bg-gray-900 lg:hidden">
       <div className="text-xl font-bold text-gray-900 dark:text-gray-50">{NAV_LABELS.brand}</div>
@@ -64,9 +76,9 @@ const MobileSidebar = () => {
           </Button>
         </DialogTrigger>
         <DialogContent className="left-0 top-0 h-full max-w-xs translate-x-0 translate-y-0 rounded-none p-0">
-          <div className="h-full space-y-4 bg-gray-100 p-6 dark:bg-gray-900" style={{ width: 280 }}>
+          <div className="flex h-full flex-col bg-gray-100 p-6 dark:bg-gray-900" style={{ width: 280 }}>
             <div className="text-xl font-bold text-gray-900 dark:text-gray-50">{NAV_LABELS.brand}</div>
-            <nav className="space-y-2">
+            <nav className="flex-1 space-y-2 pt-4">
               {navItems.map(item => {
                 const active = pathname === item.href
                 const Icon = item.icon
@@ -88,6 +100,15 @@ const MobileSidebar = () => {
                 )
               })}
             </nav>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggle}
+              className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+            >
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span>{dark ? '亮色模式' : '暗黑模式'}</span>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

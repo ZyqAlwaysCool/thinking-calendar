@@ -43,6 +43,7 @@ type reportTask struct {
 type reportJob struct {
 	reportID   string
 	genVersion int
+	jobType    string // "generate" 或 "refine"
 }
 
 const (
@@ -73,21 +74,40 @@ func (t *reportTask) ProcessReportQueue(ctx context.Context) error {
 
 	t.startWorkers(ctx)
 
+	// 扫描待生成报告
 	reports, err := t.reportRepo.ListByStatus(ctx, string(v1.ReportStatusQueued), reportScanLimit)
 	if err != nil {
 		t.logger.Error("scan queued reports failed", zap.Error(err))
 		return err
 	}
-
 	for _, report := range reports {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-t.stopChan:
 			return nil
-		case t.queue <- reportJob{reportID: report.ReportID, genVersion: report.GenVersion}:
+		case t.queue <- reportJob{reportID: report.ReportID, genVersion: report.GenVersion, jobType: "generate"}:
 		default:
 			t.logger.Info("report queue full, skip this round")
+			return nil
+		}
+	}
+
+	// 扫描待优化报告
+	refineReports, err := t.reportRepo.ListByStatus(ctx, string(v1.ReportStatusRefineQueued), reportScanLimit)
+	if err != nil {
+		t.logger.Error("scan refine reports failed", zap.Error(err))
+		return err
+	}
+	for _, report := range refineReports {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.stopChan:
+			return nil
+		case t.queue <- reportJob{reportID: report.ReportID, genVersion: report.GenVersion, jobType: "refine"}:
+		default:
+			t.logger.Info("refine queue full, skip this round")
 			return nil
 		}
 	}
@@ -111,12 +131,18 @@ func (t *reportTask) runWorker(ctx context.Context, index int) {
 		case <-t.stopChan:
 			return
 		case job := <-t.queue:
-			t.logger.Info("report generate start", zap.Int("worker", index), zap.String("report_id", job.reportID))
-			if err := t.reportService.ProcessReport(ctx, job.reportID, job.genVersion); err != nil {
-				t.logger.Error("report generate failed", zap.Int("worker", index), zap.String("report_id", job.reportID), zap.Error(err))
+			t.logger.Info("report job start", zap.Int("worker", index), zap.String("report_id", job.reportID), zap.String("type", job.jobType))
+			var err error
+			if job.jobType == "refine" {
+				err = t.reportService.ProcessRefineReport(ctx, job.reportID, job.genVersion)
+			} else {
+				err = t.reportService.ProcessReport(ctx, job.reportID, job.genVersion)
+			}
+			if err != nil {
+				t.logger.Error("report job failed", zap.Int("worker", index), zap.String("report_id", job.reportID), zap.String("type", job.jobType), zap.Error(err))
 				continue
 			}
-			t.logger.Info("report generate done", zap.Int("worker", index), zap.String("report_id", job.reportID))
+			t.logger.Info("report job done", zap.Int("worker", index), zap.String("report_id", job.reportID), zap.String("type", job.jobType))
 		}
 	}
 }

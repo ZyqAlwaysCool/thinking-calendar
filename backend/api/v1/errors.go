@@ -13,6 +13,7 @@ var (
 	ErrBadRequest          = newError(400, "请求参数错误")
 	ErrUnauthorized        = newError(401, "未登录或无权限")
 	ErrNotFound            = newError(404, "资源不存在")
+	ErrTooManyRequests     = newError(429, "请求过于频繁，请稍后重试")
 	ErrInternalServerError = newError(500, "服务器内部错误")
 
 	// user errors
@@ -47,6 +48,8 @@ var (
 	ErrReportNotReady        = newError(3007, "报告尚未生成完成")
 	ErrCallLLMFailed         = newError(3008, "调用大模型失败")
 	ErrGenReportFailed       = newError(3009, "生成报告失败")
+	ErrInvalidFeedback       = newError(3010, "反馈意见不符合要求")
+	ErrReportNotRefineable   = newError(3011, "该报告暂不支持反馈优化，请重新生成后再试")
 
 	// dashboard errors
 	ErrGetDashboardFailed = newError(4001, "获取看板数据失败")

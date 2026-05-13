@@ -17,12 +17,22 @@ type LoginReq struct {
 	Password string `json:"password" binding:"required" example:"123456"`
 }
 type LoginRespData struct {
-	AccessToken string `json:"access_token"`
-	ExpireAt    string `json:"expire_at"`
+	AccessToken     string `json:"access_token"`
+	ExpireAt        string `json:"expire_at"`
+	RefreshToken    string `json:"refresh_token"`
+	RefreshExpireAt string `json:"refresh_expire_at"`
 }
 type LoginResp struct {
 	Response
 	Data LoginRespData
+}
+
+type RefreshTokenReq struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+type RefreshTokenRespData struct {
+	AccessToken string `json:"access_token"`
+	ExpireAt    string `json:"expire_at"`
 }
 
 type UserSettings struct {

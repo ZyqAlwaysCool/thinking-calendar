@@ -30,6 +30,7 @@ type RecordService interface {
 	QueryUserRecordsByDate(ctx context.Context, userId string, date string) (v1.RecordItem, error)
 	QueryUserRecordsByDateRange(ctx context.Context, userId string, startDate string, endDate string) ([]v1.RecordItem, error)
 	GetAllUserRecords(ctx context.Context, userId string) ([]v1.RecordItem, error)
+	GetAllUserRecordsPaginated(ctx context.Context, userId string, page int, pageSize int) ([]v1.RecordItem, int64, error)
 }
 
 func NewRecordService(
@@ -178,6 +179,21 @@ func (s *recordService) GetAllUserRecords(ctx context.Context, userId string) ([
 	}
 
 	return s.toRecordItems(records), nil
+}
+
+func (s *recordService) GetAllUserRecordsPaginated(ctx context.Context, userId string, page int, pageSize int) ([]v1.RecordItem, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	records, total, err := s.recordRepo.GetByUserIDPaginated(ctx, userId, page, pageSize)
+	if err != nil {
+		s.logger.Error("get all records paginated failed.", zap.String("user_id", userId), zap.Error(err))
+		return nil, 0, v1.ErrGetRecordsFailed
+	}
+	return s.toRecordItems(records), total, nil
 }
 
 func (s *recordService) toRecordItem(record *model.Record) v1.RecordItem {

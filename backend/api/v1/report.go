@@ -19,10 +19,11 @@ const (
 	ReportPeriodMonth ReportPeriodType = "month"
 	ReportPeriodYear  ReportPeriodType = "year"
 
-	ReportStatusQueued     ReportStatus = "queued"
-	ReportStatusReady      ReportStatus = "ready"
-	ReportStatusProcessing ReportStatus = "processing"
-	ReportStatusFailed     ReportStatus = "failed"
+	ReportStatusQueued       ReportStatus = "queued"
+	ReportStatusReady        ReportStatus = "ready"
+	ReportStatusProcessing   ReportStatus = "processing"
+	ReportStatusFailed       ReportStatus = "failed"
+	ReportStatusRefineQueued ReportStatus = "refine_queued"
 )
 
 type ReportItem struct {
@@ -45,10 +46,13 @@ type GetReportsReq struct {
 	StartDate  string `form:"start_date" json:"start_date" example:"2025-12-01"`
 	EndDate    string `form:"end_date" json:"end_date" example:"2025-12-31"`
 	PeriodType string `form:"period_type" json:"period_type" binding:"required" example:"week"`
+	Page       int    `form:"page" example:"1"`       // 页码，从 1 开始
+	PageSize   int    `form:"page_size" example:"20"` // 每页条数
 }
 
 type GetReportsResp struct {
 	ReportList []ReportItem `json:"report_list"`
+	Total      int64        `json:"total"`
 }
 
 type GetReportByIDReq struct {
@@ -77,4 +81,13 @@ type EditReportReq struct {
 
 type ConfirmReportReq struct {
 	ReportID string `json:"report_id" binding:"required"`
+}
+
+type RefineReportReq struct {
+	ReportID string `json:"report_id" binding:"required"`
+	Feedback string `json:"feedback" binding:"required,min=2,max=2000"`
+}
+
+type RefineReportResp struct {
+	ReportID string `json:"report_id"`
 }

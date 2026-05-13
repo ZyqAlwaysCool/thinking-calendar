@@ -135,9 +135,16 @@ export type ConfirmReportPayload = {
   content?: string
 }
 
+export type RefineReportPayload = {
+  reportId: string
+  feedback: string
+}
+
 export type LoginRespData = {
   access_token?: string
   expire_at?: string
+  refresh_token?: string
+  refresh_expire_at?: string
   accessToken?: string
   expireAt?: string
 }

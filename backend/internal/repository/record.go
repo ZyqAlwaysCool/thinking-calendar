@@ -21,6 +21,7 @@ type RecordRespository interface {
 	Update(ctx context.Context, record *model.Record) error
 	GetByID(ctx context.Context, userID string, recordID string) (*model.Record, error)
 	GetByUserID(ctx context.Context, userID string, date string) ([]*model.Record, error)
+	GetByUserIDPaginated(ctx context.Context, userID string, page int, pageSize int) ([]*model.Record, int64, error)
 	GetByDateRange(ctx context.Context, userID string, startDate string, endDate string) ([]*model.Record, error)
 }
 
@@ -63,9 +64,9 @@ func (r *recordRepository) GetByUserID(ctx context.Context, userId string, date 
 	var records []*model.Record
 	var query *gorm.DB
 	if date == "" {
-		query = r.DB(ctx).Where("user_id = ?", userId)
+		query = r.DB(ctx).Where("user_id = ? AND is_deleted = ?", userId, false)
 	} else {
-		query = r.DB(ctx).Where("user_id = ? AND date = ?", userId, date)
+		query = r.DB(ctx).Where("user_id = ? AND date = ? AND is_deleted = ?", userId, date, false)
 	}
 
 	if err := query.Find(&records).Error; err != nil {
@@ -77,10 +78,35 @@ func (r *recordRepository) GetByUserID(ctx context.Context, userId string, date 
 	return records, nil
 }
 
+func (r *recordRepository) GetByUserIDPaginated(ctx context.Context, userId string, page int, pageSize int) ([]*model.Record, int64, error) {
+	var records []*model.Record
+	var total int64
+
+	if err := r.DB(ctx).Model(&model.Record{}).
+		Where("user_id = ? AND is_deleted = ?", userId, false).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := r.DB(ctx).
+		Where("user_id = ? AND is_deleted = ?", userId, false).
+		Order("date DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&records).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, 0, v1.ErrNotFound
+		}
+		return nil, 0, err
+	}
+	return records, total, nil
+}
+
 func (r *recordRepository) GetByDateRange(ctx context.Context, userId string, startDate string, endDate string) ([]*model.Record, error) {
 	var records []*model.Record
 	if err := r.DB(ctx).
-		Where("user_id = ? AND date >= ? AND date <= ?", userId, startDate, endDate).
+		Where("user_id = ? AND date >= ? AND date <= ? AND is_deleted = ?", userId, startDate, endDate, false).
 		Find(&records).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, v1.ErrNotFound

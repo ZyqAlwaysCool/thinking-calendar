@@ -13,16 +13,21 @@ type UserResp = {
   last_login_at: string
 }
 
+type RefreshResp = {
+  access_token: string
+  expire_at: string
+}
+
 type AuthState = {
   user: User | null
   token: string
   expireAt: string
-  username: string
-  password: string
+  refreshToken: string
+  refreshExpireAt: string
   loading: boolean
   initializing: boolean
   login: (payload: { username: string; password: string }) => Promise<void>
-  refreshToken: () => Promise<void>
+  refreshAccessToken: () => Promise<void>
   restoreSession: () => Promise<void>
   fetchProfile: () => Promise<void>
   logout: () => void
@@ -56,8 +61,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: '',
   expireAt: '',
-  username: '',
-  password: '',
+  refreshToken: '',
+  refreshExpireAt: '',
   loading: false,
   initializing: true,
   login: async ({ username, password }) => {
@@ -66,17 +71,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const loginResp = await api.post<ApiResponse<LoginRespData>>('/login', { username, password })
       const accessToken = loginResp.data.data.access_token || loginResp.data.data.accessToken
       const expireAt = loginResp.data.data.expire_at || loginResp.data.data.expireAt
-      if (!accessToken || !expireAt) {
+      const refreshToken = loginResp.data.data.refresh_token
+      const refreshExpireAt = loginResp.data.data.refresh_expire_at
+      if (!accessToken || !expireAt || !refreshToken || !refreshExpireAt) {
         throw { code: 500, msg: PAGE_TEXT.loginFail } satisfies ApiError
       }
-      saveAuthStorage({ token: accessToken, expireAt, username, password })
+      saveAuthStorage({ token: accessToken, expireAt, refreshToken, refreshExpireAt })
       set({
         token: accessToken,
         expireAt,
-        username,
-        password
+        refreshToken,
+        refreshExpireAt
       })
-      setTimer(expireAt, get().refreshToken)
+      setTimer(expireAt, get().refreshAccessToken)
       await get().fetchProfile()
       set({ initializing: false })
       toast.success(PAGE_TEXT.loginSuccess)
@@ -102,65 +109,67 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     set({ loading: false })
   },
-  refreshToken: async () => {
+  refreshAccessToken: async () => {
     const state = get()
-    if (!state.username || !state.password) {
+    if (!state.refreshToken) {
+      get().logout()
       return
     }
     try {
-      const resp = await api.post<ApiResponse<LoginRespData>>('/login', {
-        username: state.username,
-        password: state.password
+      const resp = await api.post<ApiResponse<RefreshResp>>('/refresh', {
+        refresh_token: state.refreshToken
       })
-      const accessToken = resp.data.data.access_token || resp.data.data.accessToken
-      const expireAt = resp.data.data.expire_at || resp.data.data.expireAt
+      const accessToken = resp.data.data.access_token
+      const expireAt = resp.data.data.expire_at
       if (!accessToken || !expireAt) return
       saveAuthStorage({
         token: accessToken,
         expireAt,
-        username: state.username,
-        password: state.password
+        refreshToken: state.refreshToken,
+        refreshExpireAt: state.refreshExpireAt
       })
-      set({
-        token: accessToken,
-        expireAt
-      })
-      setTimer(expireAt, get().refreshToken)
+      set({ token: accessToken, expireAt })
+      setTimer(expireAt, get().refreshAccessToken)
       await get().fetchProfile()
       set({ initializing: false })
-    } catch (error) {
-      const msg = extractErrorMessage(error, PAGE_TEXT.loginFail)
-      toast.error(msg)
+    } catch {
+      toast.error(PAGE_TEXT.loginFail)
       get().logout()
     }
   },
   restoreSession: async () => {
     const stored = loadAuthStorage()
-    if (!stored.token && stored.username && stored.password) {
-      set({ username: stored.username, password: stored.password })
-    }
     if (stored.token) {
       set({
         token: stored.token,
         expireAt: stored.expireAt,
-        username: stored.username,
-        password: stored.password
+        refreshToken: stored.refreshToken,
+        refreshExpireAt: stored.refreshExpireAt
       })
       const now = Date.now()
       const expireTime = new Date(stored.expireAt).getTime()
       if (expireTime > now) {
-        setTimer(stored.expireAt, get().refreshToken)
+        setTimer(stored.expireAt, get().refreshAccessToken)
         try {
           await get().fetchProfile()
           set({ initializing: false })
           return
         } catch {
-          // 如果 token 失效则继续尝试登录
+          // token 失效则尝试刷新
         }
       }
     }
-    if (stored.username && stored.password) {
-      await get().refreshToken()
+    // 尝试用 refresh_token 续期
+    if (stored.refreshToken) {
+      const refreshExpire = new Date(stored.refreshExpireAt).getTime()
+      if (refreshExpire > Date.now()) {
+        set({
+          refreshToken: stored.refreshToken,
+          refreshExpireAt: stored.refreshExpireAt
+        })
+        await get().refreshAccessToken()
+        return
+      }
     }
     set({ initializing: false })
   },
@@ -179,8 +188,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: null,
       token: '',
       expireAt: '',
-      username: '',
-      password: '',
+      refreshToken: '',
+      refreshExpireAt: '',
       initializing: false
     })
   }

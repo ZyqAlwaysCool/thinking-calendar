@@ -25,8 +25,10 @@ type ReportState = {
   reports: Report[]
   loading: boolean
   generating: boolean
+  refining: boolean
   fetchReports: () => Promise<void>
   generateReport: (payload: GenerateReportPayload) => Promise<Report>
+  refineReport: (reportId: string, feedback: string) => Promise<Report>
   confirmReport: (payload: { id: string; content?: string }) => Promise<Report>
   markUnconfirmed: (id: string) => void
 }
@@ -56,6 +58,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
   reports: [],
   loading: true,
   generating: false,
+  refining: false,
   fetchReports: async () => {
     set({ loading: true })
     try {
@@ -141,6 +144,38 @@ export const useReportStore = create<ReportState>((set, get) => ({
     } catch (error) {
       toast.error(extractErrorMessage(error, PAGE_TEXT.confirmFail))
       throw error
+    }
+  },
+  refineReport: async (reportId: string, feedback: string) => {
+    set({ refining: true })
+    try {
+      await api.post('/reports/refine', { report_id: reportId, feedback })
+
+      const deadline = Date.now() + POLL_TIMEOUT_MS
+      let final: Report | null = null
+      while (Date.now() < deadline) {
+        const detail = await api.get<ApiResponse<ReportResp>>(`/reports/${reportId}`)
+        const mapped = mapReport(detail.data.data)
+        set({
+          reports: get().reports.map(item => (item.id === reportId ? mapped : item))
+        })
+        if (mapped.status === 'ready') {
+          final = mapped
+          break
+        }
+        if (mapped.status === 'failed') {
+          throw new Error(mapped.failedReason || PAGE_TEXT.refineFail)
+        }
+        await sleep(POLL_INTERVAL_MS)
+      }
+      if (!final) throw new Error(PAGE_TEXT.refineFail)
+      toast.success(PAGE_TEXT.refineSuccess)
+      return final
+    } catch (error) {
+      toast.error(extractErrorMessage(error, PAGE_TEXT.refineFail))
+      throw error
+    } finally {
+      set({ refining: false })
     }
   },
   markUnconfirmed: (id: string) => {

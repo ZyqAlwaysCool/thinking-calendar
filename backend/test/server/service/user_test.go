@@ -194,10 +194,12 @@ func TestUserService_Login(t *testing.T) {
 	}, nil)
 	mockUserRepo.EXPECT().UpdateLastLoginAt(ctx, "user123", gomock.Any()).Return(nil)
 
-	token, err := userService.Login(ctx, req)
+	resp, err := userService.Login(ctx, req)
 
 	assert.NoError(t, err)
-	assert.NotEmpty(t, token)
+	assert.NotEmpty(t, resp.AccessToken)
+	assert.NotEmpty(t, resp.RefreshToken)
+	assert.NotEmpty(t, resp.RefreshExpireAt)
 }
 
 func TestUserService_Login_UserNotFound(t *testing.T) {

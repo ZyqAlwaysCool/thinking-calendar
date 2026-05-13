@@ -14,6 +14,7 @@ import (
 	"errors"
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -25,13 +26,16 @@ type ReportRepository interface {
 	GetByUnique(ctx context.Context, userID string, periodType string, startDate string, endDate string) (*model.Report, error)
 	GetByDateRange(ctx context.Context, userID string, periodType string, startDate string, endDate string) ([]*model.Report, error)
 	GetByPeriodType(ctx context.Context, userID string, periodType string) ([]*model.Report, error)
+	GetByPeriodTypePaginated(ctx context.Context, userID string, periodType string, page int, pageSize int) ([]*model.Report, int64, error)
 	GetAll(ctx context.Context, userID string) ([]*model.Report, error)
 
 	ListByStatus(ctx context.Context, status string, limit int) ([]*model.Report, error)
 	ListConfirmedByPeriod(ctx context.Context, userID string, periodType string, start string, end string) ([]*model.Report, error)
 	TryMarkProcessing(ctx context.Context, reportID string, genVersion int) (bool, error)
+	TryMarkRefineProcessing(ctx context.Context, reportID string, genVersion int) (bool, error)
 	UpdateGenerated(ctx context.Context, reportID string, genVersion int, content string, abstract string) error
 	UpdateFailed(ctx context.Context, reportID string, genVersion int, reason string) error
+	UpdateMeta(ctx context.Context, reportID string, genVersion int, meta datatypes.JSONMap) error
 }
 
 func NewReportRepository(r *Repository) ReportRepository {
@@ -119,6 +123,31 @@ func (r *reportRepository) GetByPeriodType(ctx context.Context, userID string, p
 	return reports, nil
 }
 
+func (r *reportRepository) GetByPeriodTypePaginated(ctx context.Context, userID string, periodType string, page int, pageSize int) ([]*model.Report, int64, error) {
+	var reports []*model.Report
+	var total int64
+
+	if err := r.DB(ctx).Model(&model.Report{}).
+		Where("user_id = ? AND period_type = ?", userID, periodType).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := r.DB(ctx).
+		Where("user_id = ? AND period_type = ?", userID, periodType).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&reports).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, 0, v1.ErrNotFound
+		}
+		return nil, 0, err
+	}
+	return reports, total, nil
+}
+
 func (r *reportRepository) GetAll(ctx context.Context, userID string) ([]*model.Report, error) {
 	var reports []*model.Report
 	if err := r.DB(ctx).Where("user_id = ?", userID).Find(&reports).Error; err != nil {
@@ -160,6 +189,26 @@ func (r *reportRepository) TryMarkProcessing(ctx context.Context, reportID strin
 		return false, result.Error
 	}
 	return result.RowsAffected == 1, nil
+}
+
+func (r *reportRepository) TryMarkRefineProcessing(ctx context.Context, reportID string, genVersion int) (bool, error) {
+	result := r.DB(ctx).Model(&model.Report{}).
+		Where("report_id = ? AND status = ? AND gen_version = ?", reportID, v1.ReportStatusRefineQueued, genVersion).
+		Updates(map[string]interface{}{
+			"status":     v1.ReportStatusProcessing,
+			"updated_at": time.Now(),
+		})
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
+}
+
+func (r *reportRepository) UpdateMeta(ctx context.Context, reportID string, genVersion int, meta datatypes.JSONMap) error {
+	result := r.DB(ctx).Model(&model.Report{}).
+		Where("report_id = ? AND gen_version = ?", reportID, genVersion).
+		Update("meta", meta)
+	return result.Error
 }
 
 func (r *reportRepository) UpdateGenerated(ctx context.Context, reportID string, genVersion int, content string, abstract string) error {

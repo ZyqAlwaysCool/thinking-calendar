@@ -1,21 +1,16 @@
 export const TOKEN_KEY = 'tc_access_token'
 export const EXPIRE_KEY = 'tc_access_expire'
-export const USERNAME_KEY = 'tc_username'
-export const PASSWORD_KEY = 'tc_password'
+export const REFRESH_KEY = 'tc_refresh_token'
+export const REFRESH_EXPIRE_KEY = 'tc_refresh_expire'
 
-const load = (key: string, useSession?: boolean) => {
+const load = (key: string) => {
   if (typeof window === 'undefined') return ''
-  if (useSession) return sessionStorage.getItem(key) || ''
-  return localStorage.getItem(key) || ''
+  return sessionStorage.getItem(key) || ''
 }
 
-const save = (key: string, value: string, useSession?: boolean) => {
+const save = (key: string, value: string) => {
   if (typeof window === 'undefined') return
-  if (useSession) {
-    sessionStorage.setItem(key, value)
-    return
-  }
-  localStorage.setItem(key, value)
+  sessionStorage.setItem(key, value)
 }
 
 export const loadAuthStorage = () => {
@@ -23,36 +18,38 @@ export const loadAuthStorage = () => {
     return {
       token: '',
       expireAt: '',
-      username: '',
-      password: ''
+      refreshToken: '',
+      refreshExpireAt: ''
     }
   }
   return {
-    token: load(TOKEN_KEY, true),
-    expireAt: load(EXPIRE_KEY, true),
-    username: load(USERNAME_KEY, true),
-    password: load(PASSWORD_KEY, true)
+    token: load(TOKEN_KEY),
+    expireAt: load(EXPIRE_KEY),
+    refreshToken: load(REFRESH_KEY),
+    refreshExpireAt: load(REFRESH_EXPIRE_KEY)
   }
 }
 
-export const saveAuthStorage = (payload: { token: string; expireAt: string; username: string; password: string }) => {
+export const saveAuthStorage = (payload: { token: string; expireAt: string; refreshToken: string; refreshExpireAt: string }) => {
   if (typeof window === 'undefined') return
-  save(TOKEN_KEY, payload.token, true)
-  save(EXPIRE_KEY, payload.expireAt, true)
-  save(USERNAME_KEY, payload.username, true)
-  save(PASSWORD_KEY, payload.password, true)
+  save(TOKEN_KEY, payload.token)
+  save(EXPIRE_KEY, payload.expireAt)
+  save(REFRESH_KEY, payload.refreshToken)
+  save(REFRESH_EXPIRE_KEY, payload.refreshExpireAt)
 }
 
 export const clearAuthStorage = () => {
   if (typeof window === 'undefined') return
   sessionStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(EXPIRE_KEY)
-  sessionStorage.removeItem(USERNAME_KEY)
-  sessionStorage.removeItem(PASSWORD_KEY)
+  sessionStorage.removeItem(REFRESH_KEY)
+  sessionStorage.removeItem(REFRESH_EXPIRE_KEY)
 }
 
 export const clearTokenStorage = () => {
   if (typeof window === 'undefined') return
   sessionStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(EXPIRE_KEY)
+  sessionStorage.removeItem(REFRESH_KEY)
+  sessionStorage.removeItem(REFRESH_EXPIRE_KEY)
 }

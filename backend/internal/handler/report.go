@@ -83,12 +83,16 @@ func (h *ReportHandler) GetReports(ctx *gin.Context) {
 		return
 	}
 
-	reports, err := h.reportService.GetReports(ctx, userId, &req)
+	reports, total, err := h.reportService.GetReports(ctx, userId, &req)
 	if err != nil {
 		v1.HandleError(ctx, http.StatusInternalServerError, err, nil)
 		return
 	}
-	v1.HandleSuccess(ctx, reports)
+	if req.Page > 0 {
+		v1.HandleSuccess(ctx, v1.GetReportsResp{ReportList: reports, Total: total})
+	} else {
+		v1.HandleSuccess(ctx, reports)
+	}
 }
 
 // GenerateReport godoc
@@ -163,6 +167,45 @@ func (h *ReportHandler) EditReport(ctx *gin.Context) {
 		return
 	}
 	v1.HandleSuccess(ctx, nil)
+}
+
+// RefineReport godoc
+// @Summary 反馈优化报告
+// @Schemes
+// @Description 基于用户反馈意见，对已生成的报告进行多轮对话式优化
+// @Tags 报告
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body v1.RefineReportReq true "请求参数"
+// @Success 200 {object} v1.Response
+// @Router /reports/refine [post]
+func (h *ReportHandler) RefineReport(ctx *gin.Context) {
+	userId := GetUserIdFromCtx(ctx)
+	if userId == "" {
+		v1.HandleError(ctx, http.StatusUnauthorized, v1.ErrUnauthorized, nil)
+		return
+	}
+
+	var req v1.RefineReportReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		v1.HandleError(ctx, http.StatusBadRequest, v1.ErrBadRequest, nil)
+		return
+	}
+
+	reportID, err := h.reportService.RefineReport(ctx, userId, &req)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, v1.ErrReportNotExist) {
+			status = http.StatusNotFound
+		}
+		if errors.Is(err, v1.ErrReportNotReady) || errors.Is(err, v1.ErrInvalidFeedback) || errors.Is(err, v1.ErrReportNotRefineable) {
+			status = http.StatusBadRequest
+		}
+		v1.HandleError(ctx, status, err, nil)
+		return
+	}
+	v1.HandleSuccess(ctx, v1.RefineReportResp{ReportID: reportID})
 }
 
 // ConfirmReport godoc
