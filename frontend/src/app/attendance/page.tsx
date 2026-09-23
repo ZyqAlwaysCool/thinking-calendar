@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { endOfMonth, format, isAfter, isSameMonth, parseISO, setDate, startOfMonth } from 'date-fns'
 import { PageShell } from '@/components/page-shell'
-import { Card } from '@/components/ui/card'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { PageHeader } from '@/components/page-header'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,12 +15,17 @@ import { cn, formatDateLabel, formatDateTime } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
 import { useAttendanceStore } from '@/stores/use-attendance-store'
 import { type AttendanceSettings, type AttendanceType } from '@/types'
+import { Mail, Plus, Send, Settings2, Trash2 } from 'lucide-react'
+
+type AttendanceTab = 'records' | 'settings' | 'history'
 
 const AttendancePage = () => {
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentMonth = format(new Date(), 'yyyy-MM')
   const minDate = format(startOfMonth(new Date()), 'yyyy-MM-dd')
 
+  const [activeTab, setActiveTab] = useState<AttendanceTab>('records')
+  const [addOpen, setAddOpen] = useState(false)
   const [attendanceDate, setAttendanceDate] = useState(today)
   const [attendanceType, setAttendanceType] = useState<AttendanceType>('in')
   const [attendanceNote, setAttendanceNote] = useState('')
@@ -81,26 +85,18 @@ const AttendancePage = () => {
   }, [settings, isEditing, settingsLoaded, loadingSettings])
 
   useEffect(() => {
-    if (!isEditing) return
-    resetSettingsSaved()
+    if (isEditing) resetSettingsSaved()
   }, [attendanceSettings, isEditing, resetSettingsSaved])
 
   const dayOptions = useMemo(() => Array.from({ length: 31 }, (_, index) => String(index + 1)), [])
   const todayDate = parseISO(today)
   const attendanceLimit = summary.limit > 0 ? summary.limit : attendanceSettings.monthlyLimit
   const attendanceUsed = summary.used
-  const usageRate =
-    attendanceLimit > 0 ? Math.min(100, Math.round((attendanceUsed / attendanceLimit) * 100)) : 0
-  const usageBarClass =
-    'bg-gray-800 dark:bg-gray-200'
-  const usageTextClass = 'text-gray-900 dark:text-gray-100'
+  const usageRate = attendanceLimit > 0 ? Math.min(100, Math.round((attendanceUsed / attendanceLimit) * 100)) : 0
   const attendanceStatusLocked = summary.locked
-  const attendanceStatusText = attendanceStatusLocked
-    ? ATTENDANCE_TEXT.statusLocked
-    : ATTENDANCE_TEXT.statusOpen
-  const attendanceHint = attendanceStatusLocked
-    ? ATTENDANCE_TEXT.lockedHint
-    : ATTENDANCE_TEXT.openHint
+  const sortedAttendance = useMemo(() => [...records].sort((a, b) => (a.date < b.date ? 1 : -1)), [records])
+  const selectedPush = history.find(item => item.month === pushTarget)
+
   const pushDayLabel = useMemo(() => {
     if (attendanceSettings.pushDay === 'last') return ATTENDANCE_TEXT.lastDayLabel
     const dayNumber = Number(attendanceSettings.pushDay)
@@ -110,11 +106,6 @@ const AttendancePage = () => {
     if (isAfter(targetDay, monthEnd)) return ATTENDANCE_TEXT.lastDayLabel
     return `${dayNumber}${ATTENDANCE_TEXT.daySuffix}`
   }, [attendanceSettings.pushDay])
-  const selectedPush = history.find(item => item.month === pushTarget)
-  const sortedAttendance = useMemo(
-    () => [...records].sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [records]
-  )
 
   const handleAddAttendance = async () => {
     if (attendanceStatusLocked) {
@@ -125,9 +116,7 @@ const AttendancePage = () => {
       toast.error(ATTENDANCE_TEXT.dateRequired)
       return
     }
-    const existingIndex = records.findIndex(
-      item => item.date === attendanceDate && item.type === attendanceType
-    )
+    const existingIndex = records.findIndex(item => item.date === attendanceDate && item.type === attendanceType)
     if (existingIndex === -1 && attendanceUsed >= attendanceLimit) {
       toast.error(ATTENDANCE_TEXT.limitReached)
       return
@@ -149,6 +138,7 @@ const AttendancePage = () => {
       })
       if (saved) {
         setAttendanceNote('')
+        setAddOpen(false)
       }
     } catch {}
   }
@@ -186,28 +176,6 @@ const AttendancePage = () => {
     resetSettingsSaved()
   }
 
-  const usageText = `${attendanceUsed}/${attendanceLimit}${ATTENDANCE_TEXT.countUnit}`
-  const pageLoading = loadingSettings || loadingRecords
-  const settingsDisabled = !isEditing || savingSettings
-  const pushStatusMap = {
-    not_pushed: ATTENDANCE_TEXT.pushStatusNotPushed,
-    pending: ATTENDANCE_TEXT.pushStatusPending,
-    sent: ATTENDANCE_TEXT.pushStatusSent,
-    failed: ATTENDANCE_TEXT.pushStatusFailed
-  }
-  const getPushStatusClassName = (status: string) => {
-    if (status === 'sent') {
-      return 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-    }
-    if (status === 'failed') {
-      return 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-    }
-    if (status === 'pending') {
-      return 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-    }
-    return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-  }
-
   const handleManualPush = async (month: string) => {
     try {
       const triggered = await triggerManualPush(month)
@@ -217,495 +185,389 @@ const AttendancePage = () => {
     } catch {}
   }
 
+  const pushStatusMap = {
+    not_pushed: ATTENDANCE_TEXT.pushStatusNotPushed,
+    pending: ATTENDANCE_TEXT.pushStatusPending,
+    sent: ATTENDANCE_TEXT.pushStatusSent,
+    failed: ATTENDANCE_TEXT.pushStatusFailed
+  }
+
+  const pushStatusClass = (status: string) => {
+    if (status === 'sent') return 'bg-emerald-500'
+    if (status === 'failed') return 'bg-red-500'
+    if (status === 'pending') return 'bg-amber-500'
+    return 'bg-gray-400'
+  }
+
+  const tabs: Array<{ value: AttendanceTab; label: string }> = [
+    { value: 'records', label: '本月记录' },
+    { value: 'settings', label: '推送设置' },
+    { value: 'history', label: '推送历史' }
+  ]
+
+  const pageLoading = loadingSettings || loadingRecords
+
   return (
     <PageShell>
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <div className="text-3xl font-semibold text-gray-900 dark:text-gray-50">
-            {ATTENDANCE_TEXT.pageTitle}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">{ATTENDANCE_TEXT.pageSubtitle}</div>
+      <PageHeader
+        eyebrow="工具"
+        title="补卡"
+        description="记录本月需要补卡的日期，并按设置时间发送汇总提醒。"
+        action={
+          activeTab === 'records' ? (
+            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)} disabled={attendanceStatusLocked}>
+              <Plus className="h-4 w-4" />
+              新增补卡
+            </Button>
+          ) : null
+        }
+      />
+
+      <div className="mb-8 flex gap-1 border-b border-gray-200 dark:border-gray-800">
+        {tabs.map(tab => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setActiveTab(tab.value)}
+            className={cn(
+              '-mb-px border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-150',
+              activeTab === tab.value
+                ? 'border-gray-900 text-gray-950 dark:border-gray-100 dark:text-gray-50'
+                : 'border-transparent text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {pageLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
         </div>
+      ) : null}
 
-        {pageLoading ? (
-          <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-            <Card className="space-y-4 p-4">
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-10 w-32" />
-            </Card>
-            <Card className="space-y-4 p-4">
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-36 w-full" />
-              <Skeleton className="h-10 w-32" />
-            </Card>
-          </div>
-        ) : (
-          <>
-            <div className="grid items-stretch gap-6 lg:grid-cols-[2fr,1fr]">
-            <Card className="flex h-full flex-col gap-4 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
-                    {ATTENDANCE_TEXT.sectionTitle}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {ATTENDANCE_TEXT.sectionSubtitle}
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    'rounded-full px-3 py-1 text-xs font-medium',
-                    attendanceStatusLocked
-                      ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-                      : 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-                  )}
-                >
-                  {attendanceStatusText}
-                </div>
+      {!pageLoading && activeTab === 'records' ? (
+        <div className="space-y-8">
+          <section className="grid divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="px-1 py-5 sm:px-6">
+              <div className="text-xs text-gray-400">本月已用</div>
+              <div className="mt-2 text-2xl font-semibold tracking-tight text-gray-950 dark:text-gray-50">
+                {attendanceUsed}
+                <span className="ml-1 text-sm font-normal text-gray-400">/ {attendanceLimit} 次</span>
               </div>
-
-              <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
-                <div className="flex flex-wrap items-end justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {ATTENDANCE_TEXT.usageLabel}
-                    </div>
-                    <div className={cn('text-2xl font-semibold', usageTextClass)}>
-                      {attendanceUsed}
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {ATTENDANCE_TEXT.countUnit}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {ATTENDANCE_TEXT.limitLabel}
-                    </div>
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-                      {attendanceLimit}
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {ATTENDANCE_TEXT.countUnit}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{attendanceHint}</div>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-800">
-                  <div
-                    className={cn('h-2 rounded-full transition-all duration-200', usageBarClass)}
-                    style={{ width: `${usageRate}%` }}
-                  />
-                </div>
-                <div className={cn('text-xs', usageTextClass)}>{usageText}</div>
+            </div>
+            <div className="px-1 py-5 sm:px-6">
+              <div className="text-xs text-gray-400">使用进度</div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
+                <div className="h-full rounded-full bg-gray-900 dark:bg-gray-100" style={{ width: `${usageRate}%` }} />
               </div>
-
-              <div className="space-y-3">
-                <div className="grid gap-2 text-xs text-gray-500 dark:text-gray-400 sm:grid-cols-[160px,80px,1fr,80px]">
-                  <div>{ATTENDANCE_TEXT.listHeaderDate}</div>
-                  <div>{ATTENDANCE_TEXT.listHeaderType}</div>
-                  <div>{ATTENDANCE_TEXT.listHeaderNote}</div>
-                  <div className="text-left sm:text-right">{ATTENDANCE_TEXT.listHeaderAction}</div>
-                </div>
-                {sortedAttendance.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
-                    {ATTENDANCE_TEXT.emptyRecords}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {sortedAttendance.map(item => (
-                      <div
-                        key={item.id}
-                        className="grid items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-200 sm:grid-cols-[160px,80px,1fr,80px]"
-                      >
-                        <div className="text-gray-900 dark:text-gray-50">{formatDateLabel(item.date)}</div>
-                        <div>
-                          {item.type === 'in' ? ATTENDANCE_TEXT.typeIn : ATTENDANCE_TEXT.typeOut}
-                        </div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          {item.note || ATTENDANCE_TEXT.noteEmpty}
-                        </div>
-                        <div className="flex justify-start sm:justify-end">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={attendanceStatusLocked || deletingRecord}
-                            onClick={() => handleRemoveAttendance(item.id)}
-                            className="text-gray-700 hover:scale-105 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-50 transition-all duration-200"
-                          >
-                            {ATTENDANCE_TEXT.actionDelete}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="mt-2 text-xs text-gray-400">{usageRate}%</div>
+            </div>
+            <div className="px-1 py-5 sm:px-6">
+              <div className="text-xs text-gray-400">当前状态</div>
+              <div className="mt-2 flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className={cn('h-2 w-2 rounded-full', attendanceStatusLocked ? 'bg-gray-400' : 'bg-emerald-500')} />
+                {attendanceStatusLocked ? ATTENDANCE_TEXT.statusLocked : ATTENDANCE_TEXT.statusOpen}
               </div>
-
-              <div className="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-800">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-50">
-                  {ATTENDANCE_TEXT.addTitle}
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{ATTENDANCE_TEXT.dateLabel}</Label>
-                    <Input
-                      type="date"
-                      value={attendanceDate}
-                      min={minDate}
-                      max={today}
-                      disabled={attendanceStatusLocked}
-                      onChange={(event) => setAttendanceDate(event.target.value)}
-                      className="hover:scale-105 transition-all duration-200"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{ATTENDANCE_TEXT.typeLabel}</Label>
-                    <Select
-                      value={attendanceType}
-                      onValueChange={(value: AttendanceType) => setAttendanceType(value)}
-                      disabled={attendanceStatusLocked}
-                    >
-                      <SelectTrigger className="hover:scale-105 transition-all duration-200">
-                        <SelectValue placeholder={ATTENDANCE_TEXT.typePlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ATTENDANCE_OPTIONS.types.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>{ATTENDANCE_TEXT.noteLabel}</Label>
-                  <Input
-                    value={attendanceNote}
-                    disabled={attendanceStatusLocked}
-                    placeholder={ATTENDANCE_TEXT.notePlaceholder}
-                    onChange={(event) => setAttendanceNote(event.target.value)}
-                    className="hover:scale-105 transition-all duration-200"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleAddAttendance}
-                    disabled={attendanceStatusLocked || savingRecord}
-                    className="hover:scale-105 transition-all duration-200"
-                  >
-                    {savingRecord ? PAGE_TEXT.loading : ATTENDANCE_TEXT.addButton}
-                  </Button>
-                </div>
+              <div className="mt-1 text-xs text-gray-400">
+                {attendanceStatusLocked ? ATTENDANCE_TEXT.lockedHint : ATTENDANCE_TEXT.openHint}
               </div>
-            </Card>
+            </div>
+          </section>
 
-            <Card className="flex h-full flex-col gap-4 p-4">
-              <div className="space-y-1">
-                <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
-                  {ATTENDANCE_TEXT.settingsTitle}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {ATTENDANCE_TEXT.settingsSubtitle}
-                </div>
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">本月补卡记录</h2>
+                <p className="mt-1 text-xs text-gray-400">{sortedAttendance.length} 条</p>
               </div>
-
-              <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-50">
-                  {ATTENDANCE_TEXT.scheduleTitle}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {ATTENDANCE_TEXT.scheduleSubtitle}
-                </div>
-                <div className="grid gap-2 text-sm text-gray-700 dark:text-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {ATTENDANCE_TEXT.pushDayLabel}
-                    </span>
-                    <span>{pushDayLabel}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {ATTENDANCE_TEXT.pushTimeLabel}
-                    </span>
-                    <span>{attendanceSettings.pushTime}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {ATTENDANCE_TEXT.pushRangeLabel}
-                    </span>
-                    <span>{ATTENDANCE_TEXT.rangeCurrent}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {ATTENDANCE_TEXT.pushEmailLabel}
-                    </span>
-                    <span className="truncate text-right">
-                      {attendanceSettings.email || ATTENDANCE_TEXT.emailUnset}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>{ATTENDANCE_TEXT.limitSettingLabel}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={attendanceSettings.monthlyLimit}
-                    disabled={settingsDisabled}
-                    onChange={(event) => {
-                      const nextValue = Number(event.target.value)
-                      setAttendanceSettings(prev => ({
-                        ...prev,
-                        monthlyLimit: Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0
-                      }))
-                    }}
-                    className="hover:scale-105 transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{ATTENDANCE_TEXT.pushDayLabel}</Label>
-                  <Select
-                    value={attendanceSettings.pushDay}
-                    onValueChange={(value) =>
-                      setAttendanceSettings(prev => ({
-                        ...prev,
-                        pushDay: value
-                      }))
-                    }
-                    disabled={settingsDisabled}
-                  >
-                    <SelectTrigger className="hover:scale-105 transition-all duration-200">
-                      <SelectValue placeholder={ATTENDANCE_TEXT.pushDayLabel} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[260px]">
-                      <div className="space-y-2 p-2">
-                        <SelectItem value="last">{ATTENDANCE_TEXT.lastDayLabel}</SelectItem>
-                        <div className="grid grid-cols-7 gap-1">
-                          {dayOptions.map(day => (
-                            <SelectItem key={day} value={day} className="justify-center">
-                              {day}
-                              {ATTENDANCE_TEXT.daySuffix}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      </div>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{ATTENDANCE_TEXT.pushTimeLabel}</Label>
-                  <Input
-                    type="time"
-                    step={60}
-                    value={attendanceSettings.pushTime}
-                    disabled={settingsDisabled}
-                    onChange={(event) =>
-                      setAttendanceSettings(prev => ({
-                        ...prev,
-                        pushTime: event.target.value
-                      }))
-                    }
-                    className="hover:scale-105 transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{ATTENDANCE_TEXT.pushEmailLabel}</Label>
-                  <Input
-                    value={attendanceSettings.email}
-                    disabled={settingsDisabled}
-                    placeholder={ATTENDANCE_TEXT.emailPlaceholder}
-                    onChange={(event) => {
-                      setAttendanceSettings(prev => ({
-                        ...prev,
-                        email: event.target.value
-                      }))
-                      if (emailError) setEmailError(false)
-                    }}
-                    className={cn(
-                      'hover:scale-105 transition-all duration-200',
-                      emailError && 'border-red-500 focus-visible:ring-red-500'
-                    )}
-                  />
-                  {emailError ? (
-                    <div className="text-xs text-gray-700 dark:text-gray-200">
-                      {ATTENDANCE_TEXT.emailRequired}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {ATTENDANCE_TEXT.settingsHint}
-                  </div>
-                  {settingsSaved ? (
-                    <div className="text-xs text-gray-700 dark:text-gray-200">
-                      {ATTENDANCE_TEXT.settingsSavedHint}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex justify-end">
-                  {isEditing ? (
-                    <Button
-                      onClick={handleSaveSettings}
-                      disabled={savingSettings}
-                      className="hover:scale-105 transition-all duration-200"
-                    >
-                      {savingSettings ? PAGE_TEXT.loading : ATTENDANCE_TEXT.saveSettings}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={handleEditSettings}
-                      className="hover:scale-105 transition-all duration-200"
-                    >
-                      {ATTENDANCE_TEXT.editSettings}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
             </div>
 
-            <Accordion type="single" collapsible>
-              <AccordionItem value="history">
-                <AccordionTrigger>{ATTENDANCE_TEXT.historyTitle}（{history.length}）</AccordionTrigger>
-                <AccordionContent>
-            <Card className="space-y-4 p-4">
-              <div className="space-y-1">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {ATTENDANCE_TEXT.historySubtitle}
+            {sortedAttendance.length === 0 ? (
+              <div className="border-y border-dashed border-gray-200 py-16 text-center text-sm text-gray-400 dark:border-gray-800">
+                {ATTENDANCE_TEXT.emptyRecords}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                {sortedAttendance.map(item => (
+                  <div key={item.id} className="grid items-center gap-3 py-4 sm:grid-cols-[150px_90px_minmax(0,1fr)_44px] sm:px-2">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDateLabel(item.date)}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {item.type === 'in' ? ATTENDANCE_TEXT.typeIn : ATTENDANCE_TEXT.typeOut}
+                    </div>
+                    <div className="truncate text-sm text-gray-500 dark:text-gray-400">{item.note || ATTENDANCE_TEXT.noteEmpty}</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 dark:text-gray-600 dark:hover:text-red-400"
+                      disabled={attendanceStatusLocked || deletingRecord}
+                      onClick={() => { void handleRemoveAttendance(item.id) }}
+                      aria-label={ATTENDANCE_TEXT.actionDelete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
+
+      {!pageLoading && activeTab === 'settings' ? (
+        <div className="mx-auto max-w-[760px]">
+          <section className="mb-8 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex items-start gap-3">
+              <Mail className="mt-0.5 h-4 w-4 text-gray-400" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">当前推送计划</div>
+                <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <div className="text-xs text-gray-400">{ATTENDANCE_TEXT.pushDayLabel}</div>
+                    <div className="mt-1 text-gray-700 dark:text-gray-300">{pushDayLabel} {attendanceSettings.pushTime}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">{ATTENDANCE_TEXT.pushEmailLabel}</div>
+                    <div className="mt-1 truncate text-gray-700 dark:text-gray-300">{attendanceSettings.email || ATTENDANCE_TEXT.emailUnset}</div>
+                  </div>
                 </div>
               </div>
+            </div>
+          </section>
 
-              {loadingHistory ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              ) : history.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
-                  {ATTENDANCE_TEXT.historyEmpty}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {history.map(item => (
-                    <div
-                      key={item.month}
-                      className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900"
+          <section>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">补卡与提醒设置</h2>
+                <p className="mt-1 text-xs text-gray-400">{ATTENDANCE_TEXT.settingsHint}</p>
+              </div>
+              {!isEditing ? (
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleEditSettings}>
+                  <Settings2 className="h-4 w-4" />
+                  {ATTENDANCE_TEXT.editSettings}
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <Label>{ATTENDANCE_TEXT.limitSettingLabel}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={attendanceSettings.monthlyLimit}
+                  disabled={!isEditing || savingSettings}
+                  onChange={event => {
+                    const nextValue = Number(event.target.value)
+                    setAttendanceSettings(prev => ({
+                      ...prev,
+                      monthlyLimit: Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0
+                    }))
+                  }}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label>{ATTENDANCE_TEXT.pushDayLabel}</Label>
+                <Select
+                  value={attendanceSettings.pushDay}
+                  onValueChange={value => setAttendanceSettings(prev => ({ ...prev, pushDay: value }))}
+                  disabled={!isEditing || savingSettings}
+                >
+                  <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-[280px]">
+                    <SelectItem value="last">{ATTENDANCE_TEXT.lastDayLabel}</SelectItem>
+                    {dayOptions.map(day => (
+                      <SelectItem key={day} value={day}>{day}{ATTENDANCE_TEXT.daySuffix}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>{ATTENDANCE_TEXT.pushTimeLabel}</Label>
+                <Input
+                  type="time"
+                  step={60}
+                  value={attendanceSettings.pushTime}
+                  disabled={!isEditing || savingSettings}
+                  onChange={event => setAttendanceSettings(prev => ({ ...prev, pushTime: event.target.value }))}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label>{ATTENDANCE_TEXT.pushEmailLabel}</Label>
+                <Input
+                  value={attendanceSettings.email}
+                  disabled={!isEditing || savingSettings}
+                  placeholder={ATTENDANCE_TEXT.emailPlaceholder}
+                  onChange={event => {
+                    setAttendanceSettings(prev => ({ ...prev, email: event.target.value }))
+                    if (emailError) setEmailError(false)
+                  }}
+                  className={cn('mt-2', emailError && 'border-red-400 focus-visible:ring-red-100')}
+                />
+                {emailError ? <div className="mt-2 text-xs text-red-600">{ATTENDANCE_TEXT.emailRequired}</div> : null}
+              </div>
+            </div>
+
+            {isEditing ? (
+              <div className="mt-6 flex items-center justify-end gap-3 border-t border-gray-200 pt-5 dark:border-gray-800">
+                {settingsSaved ? <span className="mr-auto text-xs text-gray-400">{ATTENDANCE_TEXT.settingsSavedHint}</span> : null}
+                <Button onClick={() => { void handleSaveSettings() }} disabled={savingSettings}>
+                  {savingSettings ? PAGE_TEXT.loading : ATTENDANCE_TEXT.saveSettings}
+                </Button>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {!pageLoading && activeTab === 'history' ? (
+        <section>
+          {loadingHistory ? (
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : history.length === 0 ? (
+            <div className="border-y border-dashed border-gray-200 py-16 text-center text-sm text-gray-400 dark:border-gray-800">
+              {ATTENDANCE_TEXT.historyEmpty}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+              {history.map(item => (
+                <details key={item.month} className="group">
+                  <summary className="grid cursor-pointer list-none items-center gap-3 py-4 sm:grid-cols-[120px_110px_minmax(0,1fr)_110px] sm:px-2">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.month}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{item.used}/{item.limit} 次</div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <span className={cn('h-2 w-2 rounded-full', pushStatusClass(item.push_status))} />
+                      {pushStatusMap[item.push_status] || ATTENDANCE_TEXT.pushStatusNotPushed}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pushingMonth === item.month}
+                      onClick={event => {
+                        event.preventDefault()
+                        setPushTarget(item.month)
+                      }}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {ATTENDANCE_TEXT.monthLabel}
-                          </div>
-                          <div className="text-base font-semibold text-gray-900 dark:text-gray-50">
-                            {item.month}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {ATTENDANCE_TEXT.monthUsageLabel}
-                          </div>
-                          <div className="text-base font-semibold text-gray-900 dark:text-gray-50">
-                            {item.used}/{item.limit}
-                            {ATTENDANCE_TEXT.countUnit}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {ATTENDANCE_TEXT.monthStatusLabel}
-                          </div>
-                          <div
-                            className={cn(
-                              'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
-                              getPushStatusClassName(item.push_status)
-                            )}
-                          >
-                            {pushStatusMap[item.push_status] || ATTENDANCE_TEXT.pushStatusNotPushed}
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          disabled={pushingMonth === item.month}
-                          onClick={() => setPushTarget(item.month)}
-                          className="hover:scale-105 transition-all duration-200"
-                        >
-                          {pushingMonth === item.month ? ATTENDANCE_TEXT.pushingButton : ATTENDANCE_TEXT.pushNowButton}
-                        </Button>
-                      </div>
+                      {pushingMonth === item.month ? ATTENDANCE_TEXT.pushingButton : ATTENDANCE_TEXT.pushNowButton}
+                    </Button>
+                  </summary>
 
-                      <div className="grid gap-2 text-sm text-gray-700 dark:text-gray-200 sm:grid-cols-3">
-                        <div className="space-y-1">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {ATTENDANCE_TEXT.pushSendAtLabel}
-                          </div>
-                          <div>{item.send_at ? formatDateTime(item.send_at) : ATTENDANCE_TEXT.pushTimeEmpty}</div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {ATTENDANCE_TEXT.pushSentAtLabel}
-                          </div>
-                          <div>{item.sent_at ? formatDateTime(item.sent_at) : ATTENDANCE_TEXT.pushTimeEmpty}</div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {ATTENDANCE_TEXT.pushErrorLabel}
-                          </div>
-                          <div className="break-all">{item.error_msg || ATTENDANCE_TEXT.pushTimeEmpty}</div>
-                        </div>
+                  <div className="pb-5 pl-2 pr-2">
+                    <div className="grid gap-4 rounded-xl bg-gray-50 p-4 text-sm dark:bg-gray-900/50 sm:grid-cols-3">
+                      <div>
+                        <div className="text-xs text-gray-400">{ATTENDANCE_TEXT.pushSendAtLabel}</div>
+                        <div className="mt-1 text-gray-700 dark:text-gray-300">{item.send_at ? formatDateTime(item.send_at) : ATTENDANCE_TEXT.pushTimeEmpty}</div>
                       </div>
-
-                      <div className="space-y-2">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {ATTENDANCE_TEXT.monthRecordsLabel}
-                        </div>
-                        <div className="space-y-1">
-                          {item.records.map(record => (
-                            <div
-                              key={record.id}
-                              className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700 dark:bg-gray-950 dark:text-gray-200"
-                            >
-                              <div>{formatDateLabel(record.date)}</div>
-                              <div>{record.type === 'in' ? ATTENDANCE_TEXT.typeIn : ATTENDANCE_TEXT.typeOut}</div>
-                            </div>
-                          ))}
-                        </div>
+                      <div>
+                        <div className="text-xs text-gray-400">{ATTENDANCE_TEXT.pushSentAtLabel}</div>
+                        <div className="mt-1 text-gray-700 dark:text-gray-300">{item.sent_at ? formatDateTime(item.sent_at) : ATTENDANCE_TEXT.pushTimeEmpty}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-400">{ATTENDANCE_TEXT.pushErrorLabel}</div>
+                        <div className="mt-1 break-all text-gray-700 dark:text-gray-300">{item.error_msg || ATTENDANCE_TEXT.pushTimeEmpty}</div>
                       </div>
                     </div>
+
+                    {item.records.length > 0 ? (
+                      <div className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white dark:divide-gray-900 dark:border-gray-800 dark:bg-gray-950">
+                        {item.records.map(record => (
+                          <div key={record.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                            <span className="text-gray-700 dark:text-gray-300">{formatDateLabel(record.date)}</span>
+                            <span className="text-gray-400">{record.type === 'in' ? ATTENDANCE_TEXT.typeIn : ATTENDANCE_TEXT.typeOut}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{ATTENDANCE_TEXT.addTitle}</DialogTitle></DialogHeader>
+          <div className="mt-3 space-y-4">
+            <div>
+              <Label>{ATTENDANCE_TEXT.dateLabel}</Label>
+              <Input
+                type="date"
+                value={attendanceDate}
+                min={minDate}
+                max={today}
+                disabled={attendanceStatusLocked}
+                onChange={event => setAttendanceDate(event.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>{ATTENDANCE_TEXT.typeLabel}</Label>
+              <Select value={attendanceType} onValueChange={(value: AttendanceType) => setAttendanceType(value)} disabled={attendanceStatusLocked}>
+                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ATTENDANCE_OPTIONS.types.map(option => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                   ))}
-                </div>
-              )}
-            </Card>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </>
-        )}
-      </div>
-      <Dialog open={!!pushTarget} onOpenChange={(open) => { if (!open) setPushTarget(null) }}>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{ATTENDANCE_TEXT.noteLabel}</Label>
+              <Input
+                value={attendanceNote}
+                disabled={attendanceStatusLocked}
+                placeholder={ATTENDANCE_TEXT.notePlaceholder}
+                onChange={event => setAttendanceNote(event.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setAddOpen(false)}>{DIALOG_TEXT.close}</Button>
+              <Button onClick={() => { void handleAddAttendance() }} disabled={attendanceStatusLocked || savingRecord}>
+                {savingRecord ? PAGE_TEXT.loading : ATTENDANCE_TEXT.addButton}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pushTarget} onOpenChange={open => { if (!open) setPushTarget(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{ATTENDANCE_TEXT.pushConfirmTitle}</DialogTitle></DialogHeader>
-          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
-            <div>{ATTENDANCE_TEXT.pushConfirmMonth}：{selectedPush?.month}</div>
-            <div>{ATTENDANCE_TEXT.pushConfirmCount}：{selectedPush?.records.length ?? 0}</div>
-            <div>{ATTENDANCE_TEXT.pushConfirmEmail}：{settings.email || ATTENDANCE_TEXT.emailUnset}</div>
+          <div className="mt-3 space-y-3 rounded-xl bg-gray-50 p-4 text-sm dark:bg-gray-900/50">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-gray-400">{ATTENDANCE_TEXT.pushConfirmMonth}</span>
+              <span className="text-gray-800 dark:text-gray-200">{selectedPush?.month}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-gray-400">{ATTENDANCE_TEXT.pushConfirmCount}</span>
+              <span className="text-gray-800 dark:text-gray-200">{selectedPush?.records.length ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-gray-400">{ATTENDANCE_TEXT.pushConfirmEmail}</span>
+              <span className="truncate text-gray-800 dark:text-gray-200">{settings.email || ATTENDANCE_TEXT.emailUnset}</span>
+            </div>
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setPushTarget(null)}>{DIALOG_TEXT.close}</Button>
             <Button
+              className="gap-2"
               disabled={!pushTarget || !settings.email || pushingMonth === pushTarget}
               onClick={() => { if (pushTarget) void handleManualPush(pushTarget) }}
             >
+              <Send className="h-4 w-4" />
               {ATTENDANCE_TEXT.pushConfirmAction}
             </Button>
           </div>
