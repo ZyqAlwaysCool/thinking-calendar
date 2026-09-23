@@ -9,7 +9,7 @@ export const DialogClose = RadixDialog.Close
 
 export const DialogOverlay = ({ className, ...props }: RadixDialog.DialogOverlayProps) => (
   <RadixDialog.Overlay
-    className={cn('fixed inset-0 z-40 bg-black/30 backdrop-blur-sm', className)}
+    className={cn('fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]', className)}
     {...props}
   />
 )
@@ -19,7 +19,7 @@ export const DialogContent = ({ className, children, ...props }: RadixDialog.Dia
     <DialogOverlay />
     <RadixDialog.Content
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-gray-100 p-6 max-h-[90vh] overflow-y-auto shadow-card dark:border-gray-800 dark:bg-gray-900',
+        'fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-[960px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-6 max-h-[90vh] overflow-y-auto shadow-2xl dark:border-gray-800 dark:bg-gray-950',
         className
       )}
       {...props}
@@ -38,9 +38,9 @@ export const DialogFooter = ({ className, ...props }: HTMLAttributes<HTMLDivElem
 )
 
 export const DialogTitle = ({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) => (
-  <RadixDialog.Title className={cn('text-xl font-semibold text-gray-800 dark:text-gray-100', className)} {...props} />
+  <RadixDialog.Title className={cn('text-lg font-semibold tracking-tight text-gray-950 dark:text-gray-50', className)} {...props} />
 )
 
 export const DialogDescription = ({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) => (
-  <RadixDialog.Description className={cn('text-sm text-gray-300 dark:text-gray-300', className)} {...props} />
+  <RadixDialog.Description className={cn('text-sm text-gray-500 dark:text-gray-400', className)} {...props} />
 )
