@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { endOfMonth, format, isAfter, isSameMonth, parseISO, setDate, startOfMonth } from 'date-fns'
 import { PageShell } from '@/components/page-shell'
 import { Card } from '@/components/ui/card'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ATTENDANCE_OPTIONS, ATTENDANCE_TEXT, PAGE_TEXT } from '@/lib/constants'
+import { ATTENDANCE_OPTIONS, ATTENDANCE_TEXT, DIALOG_TEXT, PAGE_TEXT } from '@/lib/constants'
 import { cn, formatDateLabel, formatDateTime } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
 import { useAttendanceStore } from '@/stores/use-attendance-store'
@@ -23,6 +25,7 @@ const AttendancePage = () => {
   const [attendanceDate, setAttendanceDate] = useState(today)
   const [attendanceType, setAttendanceType] = useState<AttendanceType>('in')
   const [attendanceNote, setAttendanceNote] = useState('')
+  const [pushTarget, setPushTarget] = useState<string | null>(null)
   const [attendanceSettings, setAttendanceSettings] = useState<AttendanceSettings>({
     monthlyLimit: 8,
     pushDay: 'last',
@@ -89,13 +92,8 @@ const AttendancePage = () => {
   const usageRate =
     attendanceLimit > 0 ? Math.min(100, Math.round((attendanceUsed / attendanceLimit) * 100)) : 0
   const usageBarClass =
-    usageRate >= 100 ? 'bg-red-500' : usageRate >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
-  const usageTextClass =
-    usageRate >= 100
-      ? 'text-red-600 dark:text-red-400'
-      : usageRate >= 80
-        ? 'text-amber-600 dark:text-amber-400'
-        : 'text-emerald-600 dark:text-emerald-400'
+    'bg-gray-800 dark:bg-gray-200'
+  const usageTextClass = 'text-gray-900 dark:text-gray-100'
   const attendanceStatusLocked = summary.locked
   const attendanceStatusText = attendanceStatusLocked
     ? ATTENDANCE_TEXT.statusLocked
@@ -112,6 +110,7 @@ const AttendancePage = () => {
     if (isAfter(targetDay, monthEnd)) return ATTENDANCE_TEXT.lastDayLabel
     return `${dayNumber}${ATTENDANCE_TEXT.daySuffix}`
   }, [attendanceSettings.pushDay])
+  const selectedPush = history.find(item => item.month === pushTarget)
   const sortedAttendance = useMemo(
     () => [...records].sort((a, b) => (a.date < b.date ? 1 : -1)),
     [records]
@@ -198,23 +197,23 @@ const AttendancePage = () => {
   }
   const getPushStatusClassName = (status: string) => {
     if (status === 'sent') {
-      return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300'
+      return 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
     }
     if (status === 'failed') {
-      return 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-300'
+      return 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
     }
     if (status === 'pending') {
-      return 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-300'
+      return 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
     }
     return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
   }
 
   const handleManualPush = async (month: string) => {
     try {
-      await triggerManualPush(month)
-      if (month === currentMonth) {
-        await fetchRecords(currentMonth, true)
-      }
+      const triggered = await triggerManualPush(month)
+      if (!triggered) return
+      if (month === currentMonth) await fetchRecords(currentMonth, true)
+      setPushTarget(null)
     } catch {}
   }
 
@@ -260,8 +259,8 @@ const AttendancePage = () => {
                   className={cn(
                     'rounded-full px-3 py-1 text-xs font-medium',
                     attendanceStatusLocked
-                      ? 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-300'
-                      : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300'
+                      ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
+                      : 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
                   )}
                 >
                   {attendanceStatusText}
@@ -334,7 +333,7 @@ const AttendancePage = () => {
                             variant="ghost"
                             disabled={attendanceStatusLocked || deletingRecord}
                             onClick={() => handleRemoveAttendance(item.id)}
-                            className="text-red-500 hover:scale-105 hover:text-red-600 transition-all duration-200"
+                            className="text-gray-700 hover:scale-105 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-50 transition-all duration-200"
                           >
                             {ATTENDANCE_TEXT.actionDelete}
                           </Button>
@@ -537,7 +536,7 @@ const AttendancePage = () => {
                     )}
                   />
                   {emailError ? (
-                    <div className="text-xs text-red-600 dark:text-red-400">
+                    <div className="text-xs text-gray-700 dark:text-gray-200">
                       {ATTENDANCE_TEXT.emailRequired}
                     </div>
                   ) : null}
@@ -548,7 +547,7 @@ const AttendancePage = () => {
                     {ATTENDANCE_TEXT.settingsHint}
                   </div>
                   {settingsSaved ? (
-                    <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                    <div className="text-xs text-gray-700 dark:text-gray-200">
                       {ATTENDANCE_TEXT.settingsSavedHint}
                     </div>
                   ) : null}
@@ -576,11 +575,12 @@ const AttendancePage = () => {
             </Card>
             </div>
 
+            <Accordion type="single" collapsible>
+              <AccordionItem value="history">
+                <AccordionTrigger>{ATTENDANCE_TEXT.historyTitle}（{history.length}）</AccordionTrigger>
+                <AccordionContent>
             <Card className="space-y-4 p-4">
               <div className="space-y-1">
-                <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
-                  {ATTENDANCE_TEXT.historyTitle}
-                </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   {ATTENDANCE_TEXT.historySubtitle}
                 </div>
@@ -637,7 +637,7 @@ const AttendancePage = () => {
                         <Button
                           variant="outline"
                           disabled={pushingMonth === item.month}
-                          onClick={() => handleManualPush(item.month)}
+                          onClick={() => setPushTarget(item.month)}
                           className="hover:scale-105 transition-all duration-200"
                         >
                           {pushingMonth === item.month ? ATTENDANCE_TEXT.pushingButton : ATTENDANCE_TEXT.pushNowButton}
@@ -686,9 +686,31 @@ const AttendancePage = () => {
                 </div>
               )}
             </Card>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </>
         )}
       </div>
+      <Dialog open={!!pushTarget} onOpenChange={(open) => { if (!open) setPushTarget(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{ATTENDANCE_TEXT.pushConfirmTitle}</DialogTitle></DialogHeader>
+          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+            <div>{ATTENDANCE_TEXT.pushConfirmMonth}：{selectedPush?.month}</div>
+            <div>{ATTENDANCE_TEXT.pushConfirmCount}：{selectedPush?.records.length ?? 0}</div>
+            <div>{ATTENDANCE_TEXT.pushConfirmEmail}：{settings.email || ATTENDANCE_TEXT.emailUnset}</div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setPushTarget(null)}>{DIALOG_TEXT.close}</Button>
+            <Button
+              disabled={!pushTarget || !settings.email || pushingMonth === pushTarget}
+              onClick={() => { if (pushTarget) void handleManualPush(pushTarget) }}
+            >
+              {ATTENDANCE_TEXT.pushConfirmAction}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
 }

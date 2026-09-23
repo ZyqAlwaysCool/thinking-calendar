@@ -218,6 +218,7 @@ func (r *reportRepository) UpdateGenerated(ctx context.Context, reportID string,
 			"status":        v1.ReportStatusReady,
 			"content":       content,
 			"abstract":      abstract,
+			"confirmed":    false,
 			"failed_reason": "",
 			"updated_at":    time.Now(),
 		})

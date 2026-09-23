@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { endOfISOWeek, endOfMonth, endOfYear, format, parseISO, startOfISOWeek, startOfMonth, startOfYear } from 'date-fns'
+import Link from 'next/link'
+import { eachDayOfInterval, endOfISOWeek, endOfMonth, endOfYear, format, parseISO, startOfISOWeek, startOfMonth, startOfYear } from 'date-fns'
 import { toast } from 'react-hot-toast'
 import { PageShell } from '@/components/page-shell'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -12,12 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Editor } from '@/components/editor'
-import { NAV_LABELS, PAGE_TEXT, REPORT_OPTIONS } from '@/lib/constants'
+import { SaveStatus } from '@/components/save-status'
+import { useAutoSave } from '@/lib/use-auto-save'
+import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT, REPORT_FILTER_OPTIONS, REPORT_OPTIONS } from '@/lib/constants'
 import { formatDateTime, formatRangeLabel } from '@/lib/utils'
-import { downloadBatchReportPdf } from '@/lib/pdf'
+import { downloadBatchReportPdf, downloadReportPdf } from '@/lib/pdf'
+import { downloadMarkdown } from '@/lib/download-markdown'
 import { CheckSquare, FileDown, Loader2, Sparkles, Square } from 'lucide-react'
+import { Copy, Check } from 'lucide'
+import { MorphIcon } from 'morphicons/react'
 import { useReportStore } from '@/stores/use-report-store'
-import { type GenerateReportPayload, type Report } from '@/types'
+import { useLogStore } from '@/stores/use-log-store'
+import { type GenerateReportPayload, type Report, type ReportFilter } from '@/types'
 
 const buildRange = (period: Report['period'], base?: string) => {
   const baseDate = base ? parseISO(base) : new Date()
@@ -40,9 +47,12 @@ const buildRange = (period: Report['period'], base?: string) => {
 }
 
 // ---- 报告列表卡片（无勾选框） ----
-const ReportCard = ({ item, onSelect }: { item: Report; onSelect: (item: Report) => void }) => (
+const ReportCard = ({ item, selected, onSelect }: { item: Report; selected: boolean; onSelect: (item: Report) => void }) => (
   <Card
-    className="cursor-pointer space-y-1 border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+    className={`cursor-pointer space-y-1 border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800 ${selected ? 'ring-2 ring-gray-800 dark:ring-gray-200' : ''}`}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(item) }}
     onClick={() => onSelect(item)}
   >
     <div className="flex items-center justify-between">
@@ -54,7 +64,11 @@ const ReportCard = ({ item, onSelect }: { item: Report; onSelect: (item: Report)
             : 'whitespace-nowrap shrink-0 rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200'
         }
       >
-        {item.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.unconfirmed}
+        {item.status === 'failed'
+          ? PAGE_TEXT.reportFailed
+          : item.status === 'queued' || item.status === 'processing'
+            ? PAGE_TEXT.reportProcessing
+            : item.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.unconfirmed}
       </span>
     </div>
     <div className="text-xs text-gray-300 dark:text-gray-300">{formatRangeLabel(item.startDate, item.endDate)}</div>
@@ -72,9 +86,9 @@ type ExportDialogProps = {
 }
 
 const typeLabel: Record<string, string> = {
-  week: '周报',
-  month: '月报',
-  year: '年报'
+  week: PAGE_TEXT.reportWeekLabel,
+  month: PAGE_TEXT.reportMonthLabel,
+  year: PAGE_TEXT.reportYearLabel
 }
 
 const ExportDialog = ({ open, onClose, reports }: ExportDialogProps) => {
@@ -183,7 +197,7 @@ const ExportDialog = ({ open, onClose, reports }: ExportDialogProps) => {
                         className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                         onClick={() => allChecked ? deselectAllType(type) : selectAllType(type)}
                       >
-                        {allChecked ? '取消全选' : '全选'}
+                        {allChecked ? PAGE_TEXT.exportDeselectAll : PAGE_TEXT.exportSelectAll}
                       </button>
                     </div>
                     {items.map(item => (
@@ -213,11 +227,11 @@ const ExportDialog = ({ open, onClose, reports }: ExportDialogProps) => {
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={onClose}>
-            取消
+            {PAGE_TEXT.exportCancel}
           </Button>
           <Button size="sm" onClick={handleExport} disabled={checkedIds.size === 0 || exporting} className="flex items-center gap-2">
             {exporting && <Loader2 className="h-4 w-4 animate-spin" />}
-            导出选中（{checkedIds.size}）
+            {PAGE_TEXT.exportSelected}（{checkedIds.size}）
           </Button>
         </div>
       </DialogContent>
@@ -226,7 +240,7 @@ const ExportDialog = ({ open, onClose, reports }: ExportDialogProps) => {
 }
 
 const ReportsPage = () => {
-  const { reports, fetchReports, loading, generateReport, generating, refineReport, refining, confirmReport, markUnconfirmed } = useReportStore()
+  const { reports, fetchReports, loading, generateReport, generating, refineReport, refining, confirmReport, saveDraft, markUnconfirmed } = useReportStore()
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [editorContent, setEditorContent] = useState('')
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -242,10 +256,16 @@ const ReportsPage = () => {
   const [feedback, setFeedback] = useState('')
   const [showFeedbackInput, setShowFeedbackInput] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [regenerateOpen, setRegenerateOpen] = useState(false)
+  const [reportFilter, setReportFilter] = useState<ReportFilter>('all')
+  const [copied, setCopied] = useState(false)
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { logs, fetchLogs } = useLogStore()
 
   useEffect(() => {
     void fetchReports().catch(() => {})
-  }, [fetchReports])
+    void fetchLogs().catch(() => {})
+  }, [fetchReports, fetchLogs])
 
   useEffect(() => {
     if (reports.length && !selectedReport) {
@@ -254,16 +274,54 @@ const ReportsPage = () => {
     }
   }, [reports, selectedReport])
 
+  const reportAutoSave = useAutoSave({
+    value: editorContent,
+    savedValue: selectedReport?.content ?? '',
+    enabled: !!selectedReport && selectedReport.status === 'ready' && !typing && !generating && !refining,
+    canSave: (value) => value.trim().length > 0,
+    onSave: async (nextContent) => {
+      if (!selectedReport) return
+      const reportId = selectedReport.id
+      const updated = await saveDraft(reportId, nextContent, true)
+      setSelectedReport(current => current?.id === reportId ? updated : current)
+    }
+  })
+
   const sortedReports = useMemo(
     () => [...reports].sort((a, b) => (a.endDate < b.endDate ? 1 : -1)),
     [reports]
   )
+  const filteredReports = useMemo(() => sortedReports.filter(item => {
+    if (reportFilter === 'pending') return item.status === 'ready' && !item.confirmed
+    if (reportFilter === 'confirmed') return item.confirmed
+    if (reportFilter === 'generating') return item.status === 'queued' || item.status === 'processing'
+    if (reportFilter === 'failed') return item.status === 'failed'
+    return true
+  }), [sortedReports, reportFilter])
   const grouped = useMemo(() => {
-    const week = sortedReports.filter(item => item.period === 'week')
-    const month = sortedReports.filter(item => item.period === 'month')
-    const year = sortedReports.filter(item => item.period === 'year')
+    const week = filteredReports.filter(item => item.period === 'week')
+    const month = filteredReports.filter(item => item.period === 'month')
+    const year = filteredReports.filter(item => item.period === 'year')
     return { week, month, year }
-  }, [sortedReports])
+  }, [filteredReports])
+  const materialLogs = useMemo(
+    () => logs.filter(item => item.date >= form.startDate && item.date <= form.endDate),
+    [logs, form.startDate, form.endDate]
+  )
+  const missingDates = useMemo(() => {
+    if (form.period === 'year') return []
+    const recorded = new Set(materialLogs.map(item => item.date))
+    return eachDayOfInterval({ start: parseISO(form.startDate), end: parseISO(form.endDate) })
+      .map(day => format(day, 'yyyy-MM-dd'))
+      .filter(date => date <= today && !recorded.has(date))
+  }, [form.period, form.startDate, form.endDate, materialLogs, today])
+  const yearSources = useMemo(
+    () => reports.filter(item =>
+      item.confirmed && item.period !== 'year' &&
+      item.startDate >= form.startDate && item.endDate <= form.endDate
+    ),
+    [reports, form.startDate, form.endDate]
+  )
 
   const rangeLabel = formatRangeLabel(form.startDate, form.endDate)
   const currentKey = useMemo(() => `${form.period}|${form.template}|${form.startDate}|${form.endDate}`, [form])
@@ -301,13 +359,13 @@ const ReportsPage = () => {
 
   useEffect(() => {
     return () => {
-      if (typingTimer.current) {
-        clearInterval(typingTimer.current)
-      }
+      if (typingTimer.current) clearInterval(typingTimer.current)
+      if (copyTimer.current) clearTimeout(copyTimer.current)
     }
   }, [])
 
-  const handleGenerate = async () => {
+  const performGenerate = async () => {
+    if (!(await reportAutoSave.saveNow())) return
     try {
       const created = await generateReport(form)
       setSelectedReport(created)
@@ -319,8 +377,38 @@ const ReportsPage = () => {
     }
   }
 
+  const handleGenerate = async () => {
+    if (isRegenerate) {
+      setRegenerateOpen(true)
+      return
+    }
+    await performGenerate()
+  }
+
+  const handleExportPdf = async () => {
+    if (!selectedReport || !(await reportAutoSave.saveNow())) return
+    try {
+      await downloadReportPdf(selectedReport.title, editorContent, formatRangeLabel(selectedReport.startDate, selectedReport.endDate))
+      toast.success(PAGE_TEXT.exportSuccess)
+    } catch {
+      toast.error(PAGE_TEXT.exportFail)
+    }
+  }
+
+  const handleExportMarkdown = async () => {
+    if (!selectedReport || !(await reportAutoSave.saveNow())) return
+    downloadMarkdown(`${selectedReport.title}.md`, editorContent)
+    toast.success(PAGE_TEXT.exportSuccess)
+  }
+
+  const handleBatchExport = async () => {
+    if (!(await reportAutoSave.saveNow())) return
+    setExportOpen(true)
+  }
+
   const handleRefine = async () => {
     if (!selectedReport || !feedback.trim()) return
+    if (!(await reportAutoSave.saveNow())) return
     const trimmed = feedback.trim()
     if (trimmed.length < 2) {
       toast.error('反馈意见至少2个字符')
@@ -339,8 +427,9 @@ const ReportsPage = () => {
 
   const handleConfirm = async () => {
     if (!selectedReport) return
+    if (!(await reportAutoSave.saveNow())) return
     try {
-      const updated = await confirmReport({ id: selectedReport.id, content: editorContent })
+      const updated = await confirmReport({ id: selectedReport.id })
       setSelectedReport(updated)
     } catch {
       // 已有提示
@@ -351,13 +440,17 @@ const ReportsPage = () => {
     if (!editorContent) return
     try {
       await navigator.clipboard.writeText(editorContent)
+      setCopied(true)
+      if (copyTimer.current) clearTimeout(copyTimer.current)
+      copyTimer.current = setTimeout(() => setCopied(false), 1500)
       toast.success(PAGE_TEXT.copySuccess)
     } catch {
       toast.error(PAGE_TEXT.copyFail)
     }
   }
 
-  const onSelectReport = (report: Report) => {
+  const onSelectReport = async (report: Report) => {
+    if (selectedReport?.id !== report.id && !(await reportAutoSave.saveNow())) return
     setSelectedReport(report)
     setEditorContent(report.content)
     setRangeAnchor(report.startDate)
@@ -419,7 +512,7 @@ const ReportsPage = () => {
                       <div className="py-4 text-center text-sm text-gray-400">{PAGE_TEXT.noReport}</div>
                     ) : (
                       grouped.week.map(item => (
-                        <ReportCard key={item.id} item={item} onSelect={onSelectReport} />
+                        <ReportCard key={item.id} item={item} selected={selectedReport?.id === item.id} onSelect={onSelectReport} />
                       ))
                     )}
                   </AccordionContent>
@@ -431,7 +524,7 @@ const ReportsPage = () => {
                       <div className="py-4 text-center text-sm text-gray-400">{PAGE_TEXT.noReport}</div>
                     ) : (
                       grouped.month.map(item => (
-                        <ReportCard key={item.id} item={item} onSelect={onSelectReport} />
+                        <ReportCard key={item.id} item={item} selected={selectedReport?.id === item.id} onSelect={onSelectReport} />
                       ))
                     )}
                   </AccordionContent>
@@ -443,7 +536,7 @@ const ReportsPage = () => {
                       <div className="py-4 text-center text-sm text-gray-400">{PAGE_TEXT.noReport}</div>
                     ) : (
                       grouped.year.map(item => (
-                        <ReportCard key={item.id} item={item} onSelect={onSelectReport} />
+                        <ReportCard key={item.id} item={item} selected={selectedReport?.id === item.id} onSelect={onSelectReport} />
                       ))
                     )}
                   </AccordionContent>
@@ -505,6 +598,29 @@ const ReportsPage = () => {
                   </div>
                 </div>
 
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="materials">
+                    <AccordionTrigger>
+                      {PAGE_TEXT.reportMaterialTitle} · {form.period === 'year'
+                        ? `${PAGE_TEXT.reportMaterialYear} ${yearSources.length}`
+                        : `${PAGE_TEXT.reportMaterialCount} ${materialLogs.length}，${PAGE_TEXT.reportMaterialMissing} ${missingDates.length}`}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {missingDates.length === 0 ? (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{PAGE_TEXT.reportMaterialReady}</div>
+                      ) : (
+                        <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+                          {missingDates.map(date => (
+                            <Link key={date} href={`/history?date=${date}`} className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:scale-105 dark:border-gray-700 dark:text-gray-200 transition-all duration-200">
+                              {date} · {PAGE_TEXT.sourceDateLabel}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+
                 {/* 操作按钮行：立即生成 + 导出 PDF */}
                 <div className="flex flex-wrap items-center gap-3">
                   <Button onClick={handleGenerate} disabled={generating || typing} size="lg" className="flex items-center gap-2">
@@ -516,7 +632,7 @@ const ReportsPage = () => {
                     <Button
                       variant="outline"
                       size="lg"
-                      onClick={() => setExportOpen(true)}
+                      onClick={() => { void handleBatchExport() }}
                       className="flex items-center gap-2"
                     >
                       <FileDown className="h-4 w-4" />
@@ -544,15 +660,10 @@ const ReportsPage = () => {
                 </div>
                 <Editor
                   value={editorContent}
-                  onChange={(val) => {
-                    setEditorContent(val)
-                    if (selectedReport && selectedReport.confirmed) {
-                      setSelectedReport({ ...selectedReport, confirmed: false })
-                      markUnconfirmed(selectedReport.id)
-                    }
-                  }}
+                  onChange={setEditorContent}
                   minHeight="300px"
                 />
+                <SaveStatus status={reportAutoSave.status} onRetry={() => { void reportAutoSave.saveNow() }} />
 
                 {/* 反馈优化区域 */}
                 {selectedReport && selectedReport.status === 'ready' && (
@@ -592,7 +703,16 @@ const ReportsPage = () => {
 
                 <div className="flex flex-wrap gap-3">
                   <Button variant="outline" onClick={handleCopy}>
-                    {PAGE_TEXT.copyReport}
+                    <span className="flex items-center gap-2">
+                      <MorphIcon icon={copied ? Check : Copy} size={16} reducedMotion="user" />
+                      {PAGE_TEXT.copyReport}
+                    </span>
+                  </Button>
+                  <Button variant="outline" onClick={() => { void handleExportMarkdown() }} disabled={!selectedReport}>
+                    {PAGE_TEXT.exportMarkdown}
+                  </Button>
+                  <Button variant="outline" onClick={() => { void handleExportPdf() }} disabled={!selectedReport}>
+                    {PAGE_TEXT.exportReport}
                   </Button>
                   <Button onClick={handleConfirm} disabled={!selectedReport || selectedReport.confirmed || selectedReport.status !== 'ready'}>
                     {selectedReport?.confirmed ? PAGE_TEXT.confirmed : PAGE_TEXT.confirmReport}
@@ -603,6 +723,17 @@ const ReportsPage = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={regenerateOpen} onOpenChange={setRegenerateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{PAGE_TEXT.generateAgain}</DialogTitle></DialogHeader>
+          <div className="text-sm text-gray-600 dark:text-gray-300">{PAGE_TEXT.regenerateWarning}</div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setRegenerateOpen(false)}>{DIALOG_TEXT.close}</Button>
+            <Button onClick={() => { setRegenerateOpen(false); void performGenerate() }}>{PAGE_TEXT.regenerateConfirm}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 批量导出弹窗 */}
       <ExportDialog

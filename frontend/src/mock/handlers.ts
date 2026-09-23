@@ -14,7 +14,7 @@ import {
 
 // ---- mock 内存数据 ----
 type RawLog = { id: string; date: string; content: string; updatedAt: string; count?: number; version?: number }
-type RawReport = { id: string; period: Report['period']; startDate: string; endDate: string; title: string; content: string; confirmed: boolean; createdAt: string; updatedAt?: string }
+type RawReport = { id: string; period: Report['period']; startDate: string; endDate: string; title: string; content: string; confirmed: boolean; createdAt: string; updatedAt?: string; template?: 'formal' | 'simple'; status?: Report['status'] }
 
 const rawLogs = (raw.logs as RawLog[]) || []
 const rawReports = (raw.reports as RawReport[]) || []
@@ -29,6 +29,14 @@ let reports: RawReport[] = rawReports.map((item) => ({
   ...item,
   updatedAt: item.updatedAt ?? item.createdAt
 }))
+
+let userSettings = {
+  user_id: 'userid_mock001',
+  report_template_week: '',
+  report_template_month: '',
+  auto_generate_weekly: false,
+  weekly_report_time: ''
+}
 
 let attendanceSettings: AttendanceSettingsResponse = rawAttendance.settings ?? {
   monthly_limit: 8,
@@ -117,8 +125,8 @@ const toReportResp = (item: RawReport) => ({
   title: item.title,
   content: item.content,
   confirmed: item.confirmed,
-  template: 'formal' as const,
-  status: 'ready' as const,
+  template: item.template ?? 'formal',
+  status: item.status ?? 'ready',
   created_at: item.createdAt,
   updated_at: item.updatedAt ?? item.createdAt
 })
@@ -191,18 +199,13 @@ export const handlers = [
     }> = {
       code: 0,
       msg: 'ok',
-      data: {
-        user_id: 'userid_mock001',
-        report_template_week: '',
-        report_template_month: '',
-        auto_generate_weekly: false,
-        weekly_report_time: ''
-      }
+      data: userSettings
     }
     return res(ctx.status(200), ctx.json(resp))
   }),
 
   rest.put('/api/user/settings', async (req, res, ctx) => {
+    userSettings = { ...userSettings, ...(await req.json() as typeof userSettings) }
     const resp: ApiResponse<null> = { code: 0, msg: 'ok', data: null }
     return res(ctx.status(200), ctx.json(resp))
   }),
@@ -329,7 +332,10 @@ export const handlers = [
       template: 'formal' | 'simple'
     }
     const now = new Date()
-    const reportId = `r${now.getTime()}`
+    const existing = reports.find(item =>
+      item.period === period_type && item.startDate === start_date && item.endDate === end_date
+    )
+    const reportId = existing?.id ?? `r${now.getTime()}`
     const startLabel = format(parseISO(start_date), 'yyyy年MM月dd日')
     const endLabel = format(parseISO(end_date), 'MM月dd日')
     const title =
@@ -355,7 +361,18 @@ export const handlers = [
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
     }
-    reports = [created, ...reports]
+    if (existing) {
+      existing.title = title
+      existing.content = content
+      existing.template = template
+      existing.confirmed = false
+      existing.status = 'ready'
+      existing.updatedAt = now.toISOString()
+    } else {
+      created.template = template
+      created.status = 'ready'
+      reports = [created, ...reports]
+    }
     // 返回 report_id 字符串
     const resp: ApiResponse<string> = { code: 0, msg: 'ok', data: reportId }
     return res(ctx.status(200), ctx.json(resp))
@@ -367,6 +384,7 @@ export const handlers = [
     const found = reports.find(item => item.id === report_id)
     if (found) {
       found.content = content
+      found.confirmed = false
       found.updatedAt = new Date().toISOString()
     }
     const resp: ApiResponse<null> = { code: 0, msg: 'ok', data: null }

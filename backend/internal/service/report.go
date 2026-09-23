@@ -136,10 +136,7 @@ func (s *reportService) GenerateReport(ctx context.Context, userId string, req *
 	report.Template = req.Template
 	report.Title = buildReportTitle(req.PeriodType, req.StartDate, req.EndDate)
 	report.Status = string(v1.ReportStatusQueued)
-	report.Confirmed = false
-	report.Abstract = ""
 	report.FailedReason = ""
-	report.Content = ""
 	report.GenVersion = report.GenVersion + 1
 	if err := s.reportRepo.Update(ctx, report); err != nil {
 		s.logger.Error("update report placeholder failed", zap.String("user_id", userId), zap.String("report_id", report.ReportID), zap.Error(err))

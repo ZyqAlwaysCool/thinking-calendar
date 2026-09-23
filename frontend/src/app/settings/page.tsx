@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Editor } from '@/components/editor'
+import { SaveStatus } from '@/components/save-status'
+import { useAutoSave } from '@/lib/use-auto-save'
 import { DIALOG_TEXT, NAV_LABELS, PAGE_TEXT } from '@/lib/constants'
 import { useSettingsStore } from '@/stores/use-settings-store'
 import { cn } from '@/lib/utils'
@@ -23,11 +25,35 @@ const SettingsPage = () => {
   }, [fetchSettings])
 
   useEffect(() => {
-    if (settings) {
-      setWeekDraft(settings.reportTemplateWeek)
-      setMonthDraft(settings.reportTemplateMonth)
+    if (!settings) return
+    if (!weekOpen) setWeekDraft(settings.reportTemplateWeek)
+    if (!monthOpen) setMonthDraft(settings.reportTemplateMonth)
+  }, [settings, weekOpen, monthOpen])
+
+  const weekAutoSave = useAutoSave({
+    value: weekDraft,
+    savedValue: settings?.reportTemplateWeek ?? '',
+    enabled: weekOpen && !!settings,
+    onSave: async (nextContent) => {
+      if (!settings) return
+      await updateSettings({
+        reportTemplateWeek: nextContent,
+        reportTemplateMonth: settings.reportTemplateMonth
+      }, true)
     }
-  }, [settings])
+  })
+  const monthAutoSave = useAutoSave({
+    value: monthDraft,
+    savedValue: settings?.reportTemplateMonth ?? '',
+    enabled: monthOpen && !!settings,
+    onSave: async (nextContent) => {
+      if (!settings) return
+      await updateSettings({
+        reportTemplateWeek: settings.reportTemplateWeek,
+        reportTemplateMonth: nextContent
+      }, true)
+    }
+  })
 
   const previewText = useMemo(
     () => ({
@@ -38,29 +64,11 @@ const SettingsPage = () => {
   )
 
   const handleSaveWeek = async () => {
-    if (!settings) return
-    try {
-      await updateSettings({
-        reportTemplateWeek: weekDraft,
-        reportTemplateMonth: settings.reportTemplateMonth
-      })
-      setWeekOpen(false)
-    } catch {
-      // 已有提示
-    }
+    if (await weekAutoSave.saveNow()) setWeekOpen(false)
   }
 
   const handleSaveMonth = async () => {
-    if (!settings) return
-    try {
-      await updateSettings({
-        reportTemplateWeek: settings.reportTemplateWeek,
-        reportTemplateMonth: monthDraft
-      })
-      setMonthOpen(false)
-    } catch {
-      // 已有提示
-    }
+    if (await monthAutoSave.saveNow()) setMonthOpen(false)
   }
 
   return (
@@ -145,16 +153,17 @@ const SettingsPage = () => {
         )}
       </div>
 
-      <Dialog open={weekOpen} onOpenChange={setWeekOpen}>
+      <Dialog open={weekOpen} onOpenChange={(open) => { if (open) setWeekOpen(true); else void handleSaveWeek() }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{PAGE_TEXT.settingsWeekTitle}</DialogTitle>
           </DialogHeader>
           <Editor value={weekDraft} onChange={setWeekDraft} minHeight="300px" />
+          <SaveStatus status={weekAutoSave.status} onRetry={() => { void weekAutoSave.saveNow() }} />
           <div className="flex justify-end gap-3 pt-4">
             <Button
               variant="outline"
-              onClick={() => setWeekOpen(false)}
+              onClick={() => { void handleSaveWeek() }}
               className="hover:scale-105 transition-all duration-200"
             >
               {DIALOG_TEXT.close}
@@ -166,16 +175,17 @@ const SettingsPage = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={monthOpen} onOpenChange={setMonthOpen}>
+      <Dialog open={monthOpen} onOpenChange={(open) => { if (open) setMonthOpen(true); else void handleSaveMonth() }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{PAGE_TEXT.settingsMonthTitle}</DialogTitle>
           </DialogHeader>
           <Editor value={monthDraft} onChange={setMonthDraft} minHeight="300px" />
+          <SaveStatus status={monthAutoSave.status} onRetry={() => { void monthAutoSave.saveNow() }} />
           <div className="flex justify-end gap-3 pt-4">
             <Button
               variant="outline"
-              onClick={() => setMonthOpen(false)}
+              onClick={() => { void handleSaveMonth() }}
               className="hover:scale-105 transition-all duration-200"
             >
               {DIALOG_TEXT.close}

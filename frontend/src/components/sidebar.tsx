@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, ClipboardCheck, FileText, History, LayoutDashboard, Menu, Moon, Settings, Sun } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, FileText, History, LayoutDashboard, Settings } from 'lucide-react'
+import { Menu, X, Moon, Sun } from 'lucide'
+import { MorphIcon } from 'morphicons/react'
 import { NAV_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useDarkMode } from '@/app/providers'
@@ -55,8 +57,8 @@ const DesktopSidebar = () => {
         onClick={toggle}
         className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
       >
-        {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        <span>{dark ? '亮色模式' : '暗黑模式'}</span>
+        <MorphIcon icon={dark ? Sun : Moon} size={16} reducedMotion="user" />
+        <span>{dark ? NAV_LABELS.themeLight : NAV_LABELS.themeDark}</span>
       </Button>
     </aside>
   )
@@ -71,8 +73,8 @@ const MobileSidebar = () => {
       <div className="text-xl font-bold text-gray-900 dark:text-gray-50">{NAV_LABELS.brand}</div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Menu className="h-5 w-5" />
+          <Button variant="outline" size="sm" aria-label={open ? NAV_LABELS.closeMenu : NAV_LABELS.openMenu}>
+            <MorphIcon icon={open ? X : Menu} size={20} reducedMotion="user" />
           </Button>
         </DialogTrigger>
         <DialogContent className="left-0 top-0 h-full max-w-xs translate-x-0 translate-y-0 rounded-none p-0">
@@ -106,8 +108,8 @@ const MobileSidebar = () => {
               onClick={toggle}
               className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
             >
-              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              <span>{dark ? '亮色模式' : '暗黑模式'}</span>
+              <MorphIcon icon={dark ? Sun : Moon} size={16} reducedMotion="user" />
+              <span>{dark ? NAV_LABELS.themeLight : NAV_LABELS.themeDark}</span>
             </Button>
           </div>
         </DialogContent>

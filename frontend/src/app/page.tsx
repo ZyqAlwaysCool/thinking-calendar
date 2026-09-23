@@ -8,12 +8,15 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { Eye, EyeOff } from 'lucide'
+import { MorphIcon } from 'morphicons/react'
 
 const LoginPage = () => {
   const router = useRouter()
   const { login, loading, user, restoreSession, initializing } = useAuthStore()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -84,12 +87,26 @@ const LoginPage = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-          <Input
-            placeholder={PAGE_TEXT.passwordPlaceholder}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="relative">
+            <Input
+              placeholder={PAGE_TEXT.passwordPlaceholder}
+              type={passwordVisible ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pr-12"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1"
+              aria-label={passwordVisible ? PAGE_TEXT.hidePassword : PAGE_TEXT.showPassword}
+              onClick={() => setPasswordVisible(current => !current)}
+            >
+              <MorphIcon icon={passwordVisible ? EyeOff : Eye} size={18} reducedMotion="user" />
+            </Button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">{PAGE_TEXT.loginHelp}</div>
           <Button size="lg" className="w-full" onClick={handleLogin} disabled={loading}>
             {loading ? PAGE_TEXT.loading : PAGE_TEXT.loginButton}
           </Button>

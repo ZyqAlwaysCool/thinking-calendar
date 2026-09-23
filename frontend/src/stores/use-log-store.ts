@@ -26,9 +26,9 @@ type LogState = {
   currentLog: Log | null
   loading: boolean
   saving: boolean
-  fetchLogs: () => Promise<void>
+  fetchLogs: (silent?: boolean) => Promise<void>
   fetchLogByDate: (date: string) => Promise<void>
-  saveLog: (payload: SaveLogPayload) => Promise<void>
+  saveLog: (payload: SaveLogPayload, silent?: boolean) => Promise<void>
 }
 
 export const useLogStore = create<LogState>((set, get) => ({
@@ -36,8 +36,8 @@ export const useLogStore = create<LogState>((set, get) => ({
   currentLog: null,
   loading: true,
   saving: false,
-  fetchLogs: async () => {
-    set({ loading: true })
+  fetchLogs: async (silent = false) => {
+    if (!silent) set({ loading: true })
     try {
       const res = await api.get<ApiResponse<RecordResp[]>>('/records')
       const mapped = (res.data.data || []).map(mapRecord)
@@ -67,7 +67,7 @@ export const useLogStore = create<LogState>((set, get) => ({
       throw error
     }
   },
-  saveLog: async (payload: SaveLogPayload) => {
+  saveLog: async (payload: SaveLogPayload, silent = false) => {
     set({ saving: true })
     try {
       const trimmed = payload.content.trim()
@@ -87,7 +87,7 @@ export const useLogStore = create<LogState>((set, get) => ({
             },
             saving: false
           })
-          toast.success(PAGE_TEXT.saveSuccess)
+          if (!silent) toast.success(PAGE_TEXT.saveSuccess)
           return
         }
         set({
@@ -114,7 +114,7 @@ export const useLogStore = create<LogState>((set, get) => ({
         currentLog: saved,
         saving: false
       })
-      toast.success(PAGE_TEXT.saveSuccess)
+      if (!silent) toast.success(PAGE_TEXT.saveSuccess)
     } catch (error) {
       set({ saving: false })
       toast.error(extractErrorMessage(error, PAGE_TEXT.saveFail))

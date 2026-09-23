@@ -30,6 +30,7 @@ type ReportState = {
   generateReport: (payload: GenerateReportPayload) => Promise<Report>
   refineReport: (reportId: string, feedback: string) => Promise<Report>
   confirmReport: (payload: { id: string; content?: string }) => Promise<Report>
+  saveDraft: (id: string, content: string, silent?: boolean) => Promise<Report>
   markUnconfirmed: (id: string) => void
 }
 
@@ -126,6 +127,21 @@ export const useReportStore = create<ReportState>((set, get) => ({
       throw error
     } finally {
       set({ generating: false })
+    }
+  },
+  saveDraft: async (id, content, silent = false) => {
+    try {
+      await api.post<ApiResponse<unknown>>('/reports/edit', { report_id: id, content })
+      const detail = await api.get<ApiResponse<ReportResp>>(`/reports/${id}`)
+      const mapped = mapReport(detail.data.data)
+      set({
+        reports: get().reports.map(item => (item.id === id ? mapped : item))
+      })
+      if (!silent) toast.success(PAGE_TEXT.saveSuccess)
+      return mapped
+    } catch (error) {
+      toast.error(extractErrorMessage(error, PAGE_TEXT.saveFail))
+      throw error
     }
   },
   confirmReport: async ({ id, content }) => {

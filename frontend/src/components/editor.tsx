@@ -5,7 +5,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Bold, Heading2, Heading3, Italic, List, ListOrdered } from 'lucide-react'
-import { PAGE_TEXT } from '@/lib/constants'
+import { PAGE_TEXT, TOOLBAR_TEXT } from '@/lib/constants'
 import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown'
 import { Button } from './ui/button'
 
@@ -67,12 +67,12 @@ export const Editor = ({ value, onChange, minHeight = 'calc(100vh - 220px)' }: E
   }
 
   const toolbarButtons = [
-    { icon: <Bold className="h-4 w-4" />, action: () => editor.chain().focus().toggleBold().run(), key: 'bold' },
-    { icon: <Italic className="h-4 w-4" />, action: () => editor.chain().focus().toggleItalic().run(), key: 'italic' },
-    { icon: <List className="h-4 w-4" />, action: () => editor.chain().focus().toggleBulletList().run(), key: 'bullet' },
-    { icon: <ListOrdered className="h-4 w-4" />, action: () => editor.chain().focus().toggleOrderedList().run(), key: 'ordered' },
-    { icon: <Heading2 className="h-4 w-4" />, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), key: 'h2' },
-    { icon: <Heading3 className="h-4 w-4" />, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), key: 'h3' }
+    { icon: <Bold className="h-4 w-4" />, action: () => editor.chain().focus().toggleBold().run(), key: 'bold', label: TOOLBAR_TEXT.bold, active: editor.isActive('bold') },
+    { icon: <Italic className="h-4 w-4" />, action: () => editor.chain().focus().toggleItalic().run(), key: 'italic', label: TOOLBAR_TEXT.italic, active: editor.isActive('italic') },
+    { icon: <List className="h-4 w-4" />, action: () => editor.chain().focus().toggleBulletList().run(), key: 'bullet', label: TOOLBAR_TEXT.bullet, active: editor.isActive('bulletList') },
+    { icon: <ListOrdered className="h-4 w-4" />, action: () => editor.chain().focus().toggleOrderedList().run(), key: 'ordered', label: TOOLBAR_TEXT.ordered, active: editor.isActive('orderedList') },
+    { icon: <Heading2 className="h-4 w-4" />, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), key: 'h2', label: TOOLBAR_TEXT.h2, active: editor.isActive('heading', { level: 2 }) },
+    { icon: <Heading3 className="h-4 w-4" />, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), key: 'h3', label: TOOLBAR_TEXT.h3, active: editor.isActive('heading', { level: 3 }) }
   ]
 
   return (
@@ -86,6 +86,8 @@ export const Editor = ({ value, onChange, minHeight = 'calc(100vh - 220px)' }: E
             className="rounded-lg border-gray-200 px-3"
             type="button"
             onClick={item.action}
+            aria-label={item.label}
+            aria-pressed={item.active}
           >
             {item.icon}
           </Button>

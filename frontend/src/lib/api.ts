@@ -1,5 +1,6 @@
 import axios, { type AxiosError } from 'axios'
 import { clearTokenStorage, TOKEN_KEY } from './storage'
+import { waitForMock } from '@/mock/wait-mock'
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api'
 
@@ -12,8 +13,9 @@ export const api = axios.create({
   baseURL
 })
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   if (typeof window !== 'undefined') {
+    if (process.env.NEXT_PUBLIC_API_MOCKING !== 'disabled') await waitForMock()
     const stored = sessionStorage.getItem(TOKEN_KEY)
     if (stored) {
       const hasBearer = stored.startsWith('Bearer ')
