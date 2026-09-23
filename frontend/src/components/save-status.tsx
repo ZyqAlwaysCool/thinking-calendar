@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CheckCircle2, Clock3, LoaderCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock3, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PAGE_TEXT } from '@/lib/constants'
 import { type AutoSaveStatus } from '@/types'
@@ -13,7 +13,7 @@ type SaveStatusProps = {
 const iconMap = {
   saved: CheckCircle2,
   pending: Clock3,
-  saving: LoaderCircle,
+  saving: Loader2,
   error: AlertCircle,
   empty: AlertCircle
 }
