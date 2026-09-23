@@ -15,7 +15,6 @@ import {
   Sun,
   X
 } from 'lucide-react'
-import { MorphIcon } from 'morphicons/react'
 import { NAV_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useDarkMode } from '@/app/providers'
@@ -122,7 +121,7 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
           onClick={toggle}
           className="h-10 w-full justify-start gap-3 px-3 text-gray-500 dark:text-gray-400"
         >
-          <MorphIcon icon={dark ? Sun : Moon} size={17} reducedMotion="user" />
+          {dark ? <Sun className="h-[17px] w-[17px]" /> : <Moon className="h-[17px] w-[17px]" />}
           <span>{dark ? NAV_LABELS.themeLight : NAV_LABELS.themeDark}</span>
         </Button>
       </div>
@@ -146,7 +145,7 @@ const MobileSidebar = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label={open ? NAV_LABELS.closeMenu : NAV_LABELS.openMenu}>
-            <MorphIcon icon={open ? X : Menu} size={20} reducedMotion="user" />
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </DialogTrigger>
         <DialogContent className="left-0 top-0 h-full w-[280px] max-w-none translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0 p-5">
