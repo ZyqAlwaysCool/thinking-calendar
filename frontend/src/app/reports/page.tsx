@@ -35,10 +35,10 @@ import {
   Download,
   FileDown,
   Loader2,
-  MoreHorizontal,
+  FileText,
   Plus,
   Square,
-  Wand2
+  PencilLine
 } from 'lucide-react'
 import { useReportStore } from '@/stores/use-report-store'
 import { useLogStore } from '@/stores/use-log-store'
@@ -494,7 +494,7 @@ const ReportsPage = () => {
                       PDF
                     </Button>
                     <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => { void handleExportMarkdown() }}>
-                      <MoreHorizontal className="h-4 w-4" />
+                      <FileText className="h-4 w-4" />
                       Markdown
                     </Button>
                     <Button
@@ -524,7 +524,7 @@ const ReportsPage = () => {
                   <div className="mt-6 border-t border-gray-200 pt-5 dark:border-gray-800">
                     {!showRefine ? (
                       <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowRefine(true)}>
-                        <Wand2 className="h-4 w-4" />
+                        <PencilLine className="h-4 w-4" />
                         {PAGE_TEXT.refineToggle}
                       </Button>
                     ) : (
