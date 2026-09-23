@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Sidebar } from './sidebar'
 import { useAuthStore } from '@/stores/use-auth-store'
 import { PAGE_TEXT } from '@/lib/constants'
-import { cn } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
 
 type Props = {
@@ -29,19 +28,18 @@ const UserMenu = () => {
     <div className="relative">
       <button
         type="button"
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-gray-50 transition-all duration-200 hover:scale-[1.02] dark:bg-gray-100 dark:text-gray-900"
-        onClick={() => setOpen(!open)}
+        aria-label={name}
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-sm font-medium text-gray-800 transition-colors duration-150 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
+        onClick={() => setOpen(current => !current)}
       >
         {short}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-44 rounded-xl border border-gray-200 bg-gray-100 p-3 text-sm shadow-card dark:border-gray-800 dark:bg-gray-900">
-          <div className="border-b border-gray-200 pb-2 text-gray-800 dark:border-gray-800 dark:text-gray-100">{name}</div>
+        <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-gray-200 bg-white p-2 text-sm shadow-lg dark:border-gray-800 dark:bg-gray-950">
+          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">{name}</div>
           <button
             type="button"
-            className={cn(
-              'mt-2 w-full rounded-lg px-3 py-2 text-left text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:bg-gray-200 dark:text-gray-100 dark:hover:bg-gray-800'
-            )}
+            className="w-full rounded-md px-3 py-2 text-left text-gray-700 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-gray-900 dark:hover:text-gray-50"
             onClick={handleLogout}
           >
             {PAGE_TEXT.userMenuLogout}
@@ -75,9 +73,7 @@ const ProtectedShell = ({ children }: Props) => {
       void refreshAccessToken()
     }
     window.addEventListener('auth:unauthorized', handler)
-    return () => {
-      window.removeEventListener('auth:unauthorized', handler)
-    }
+    return () => window.removeEventListener('auth:unauthorized', handler)
   }, [logout, router, refreshAccessToken, refreshToken])
 
   useEffect(() => {
@@ -87,19 +83,13 @@ const ProtectedShell = ({ children }: Props) => {
     }
   }, [user, router, initializing])
 
-  if (initializing) {
-    return null
-  }
-
-  if (!user) {
-    return null
-  }
+  if (initializing || !user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50/70 dark:bg-gray-950">
       <Sidebar />
-      <main className="w-full lg:pl-[280px]">
-        <div className="mx-auto w-full max-w-none p-6 lg:p-8">
+      <main className="w-full lg:pl-[240px]">
+        <div className="mx-auto w-full max-w-[1440px] px-5 py-5 sm:px-7 lg:px-10 lg:py-8">
           <div className="mb-6 flex justify-end">
             <UserMenu />
           </div>
