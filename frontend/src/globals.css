@@ -15,13 +15,14 @@
 }
 
 body {
-  background-color: #f9fafb;
+  background-color: #fafafa;
   color: #1f2937;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .dark body {
-  background-color: #111827;
+  background-color: #030712;
   color: #f3f4f6;
 }
 
@@ -70,4 +71,20 @@ a {
   font-size: 1.125rem;
   font-weight: 600;
   margin: 0.75rem 0 0.4rem;
+}
+
+
+.tiptap-content {
+  line-height: 1.75;
+}
+
+.tiptap-content p {
+  margin: 0.45rem 0;
+}
+
+.tiptap-content blockquote {
+  margin: 0.75rem 0;
+  border-left: 2px solid #d1d5db;
+  padding-left: 1rem;
+  color: #6b7280;
 }
