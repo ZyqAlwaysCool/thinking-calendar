@@ -141,10 +141,10 @@ export const PAGE_TEXT = {
   refineToggle: '内容优化',
   refineToggleCollapse: '收起反馈',
   refinePlaceholder: '输入修改建议，如“精简到300字”“补充更多细节”“调整风险部分的表述”...',
-  refineReport: '发送反馈优化',
-  refining: '优化中…',
-  refineSuccess: '优化成功',
-  refineFail: '优化失败'
+  refineReport: '应用修改建议',
+  refining: '正在修改…',
+  refineSuccess: '修改完成',
+  refineFail: '修改失败'
 }
 
 export const ATTENDANCE_TEXT = {
