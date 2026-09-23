@@ -9,7 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { Eye, EyeOff } from 'lucide-react'
-import { MorphIcon } from 'morphicons/react'
 
 const LoginPage = () => {
   const router = useRouter()
@@ -115,7 +114,7 @@ const LoginPage = () => {
                     aria-label={passwordVisible ? PAGE_TEXT.hidePassword : PAGE_TEXT.showPassword}
                     onClick={() => setPasswordVisible(current => !current)}
                   >
-                    <MorphIcon icon={passwordVisible ? EyeOff : Eye} size={17} reducedMotion="user" />
+                    {passwordVisible ? <EyeOff className="h-[17px] w-[17px]" /> : <Eye className="h-[17px] w-[17px]" />}
                   </Button>
                 </div>
               </div>
