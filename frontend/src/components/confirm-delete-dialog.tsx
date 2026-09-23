@@ -28,7 +28,7 @@ export const ConfirmDeleteDialog = ({ open, onOpenChange, onConfirm }: ConfirmDe
         <div className="text-sm text-gray-600 dark:text-gray-300">{PAGE_TEXT.confirmDeleteHint}</div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => onOpenChange(false)}>{DIALOG_TEXT.close}</Button>
-          <Button onClick={handleConfirm} disabled={deleting}>
+          <Button variant="danger" onClick={handleConfirm} disabled={deleting}>
             {deleting ? PAGE_TEXT.loading : PAGE_TEXT.confirmDeleteAction}
           </Button>
         </div>
