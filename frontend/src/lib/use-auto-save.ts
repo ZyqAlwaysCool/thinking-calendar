@@ -38,16 +38,17 @@ export const useAutoSave = ({
     timerRef.current = null
   }, [])
 
-  const saveNow = useCallback(async (): Promise<boolean> => {
+  const saveNow = useCallback(async (force = false): Promise<boolean> => {
     clearTimer()
-    if (!enabledRef.current || valueRef.current === savedRef.current) return true
+    if (!enabledRef.current) return false
+    if (runningRef.current) {
+      const saved = await runningRef.current
+      if (valueRef.current === savedRef.current) return saved
+    }
+    if (!force && valueRef.current === savedRef.current) return true
     if (canSaveRef.current && !canSaveRef.current(valueRef.current)) {
       setStatus('empty')
       return false
-    }
-    if (runningRef.current) {
-      await runningRef.current
-      if (valueRef.current === savedRef.current) return true
     }
     const snapshot = valueRef.current
     const request = (async () => {

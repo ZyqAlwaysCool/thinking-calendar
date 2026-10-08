@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { format, formatDistanceToNow, parseISO } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { toast } from 'react-hot-toast'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Editor } from '@/components/editor'
@@ -49,16 +50,25 @@ const TodayPage = () => {
     }
   })
 
+  const handleSave = useCallback(async () => {
+    try {
+      const saved = await saveNow(true)
+      if (saved) toast.success(PAGE_TEXT.todaySaveSuccess)
+    } catch {
+      toast.error(PAGE_TEXT.saveFail)
+    }
+  }, [saveNow])
+
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault()
-        void saveNow()
+        void handleSave()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [saveNow])
+  }, [handleSave])
 
   const handleDelete = () => {
     if (currentLog?.id) setDeleteOpen(true)
@@ -95,12 +105,12 @@ const TodayPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => { void saveNow() }}
-                  disabled={saving || !content.trim()}
+                  className="h-8 gap-1.5 text-xs hover:scale-105 transition-all duration-200"
+                  onClick={() => { void handleSave() }}
+                  disabled={loading || saving || status === 'saving' || !content.trim()}
                 >
                   <Save className="h-3.5 w-3.5" />
-                  保存
+                  {PAGE_TEXT.save}
                 </Button>
                 {currentLog?.id ? (
                   <Button

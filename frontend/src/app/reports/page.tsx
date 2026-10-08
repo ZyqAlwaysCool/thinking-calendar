@@ -38,7 +38,8 @@ import {
   FileText,
   Plus,
   Square,
-  PencilLine
+  PencilLine,
+  Save
 } from 'lucide-react'
 import { useReportStore } from '@/stores/use-report-store'
 import { useLogStore } from '@/stores/use-log-store'
@@ -320,6 +321,16 @@ const ReportsPage = () => {
     void performGenerate()
   }
 
+  const handleSaveReport = async () => {
+    if (!selectedReport || selectedReport.status !== 'ready') return
+    try {
+      const saved = await reportAutoSave.saveNow(true)
+      if (saved) toast.success(PAGE_TEXT.reportSaveSuccess)
+    } catch {
+      toast.error(PAGE_TEXT.saveFail)
+    }
+  }
+
   const handleConfirm = async () => {
     if (!selectedReport || !(await reportAutoSave.saveNow())) return
     try {
@@ -485,6 +496,18 @@ const ReportsPage = () => {
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 hover:scale-105 transition-all duration-200"
+                      onClick={() => { void handleSaveReport() }}
+                      disabled={
+                        selectedReport.status !== 'ready' || reportAutoSave.status === 'saving' || !editorContent.trim()
+                      }
+                    >
+                      <Save className="h-4 w-4" />
+                      {PAGE_TEXT.reportSave}
+                    </Button>
                     <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => { void handleCopy() }}>
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {PAGE_TEXT.copyReport}
