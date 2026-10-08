@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { format, formatDistanceToNow, parseISO } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { toast } from 'react-hot-toast'
@@ -21,7 +21,8 @@ const TodayPage = () => {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [content, setContent] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const hydratedRef = useRef(false)
+  const [ready, setReady] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const { currentLog, loading, saving, fetchLogByDate, saveLog } = useLogStore()
 
   const lastUpdatedHint = useMemo(() => {
@@ -29,21 +30,27 @@ const TodayPage = () => {
     return formatDistanceToNow(parseISO(currentLog.updatedAt), { locale: zhCN, addSuffix: true })
   }, [currentLog])
 
-  useEffect(() => {
-    void fetchLogByDate(today).catch(() => {})
+  const loadToday = useCallback(async () => {
+    setReady(false)
+    setLoadFailed(false)
+    try {
+      await fetchLogByDate(today)
+      const loaded = useLogStore.getState().currentLog
+      setContent(loaded?.date === today ? loaded.content : '')
+      setReady(true)
+    } catch {
+      setLoadFailed(true)
+    }
   }, [fetchLogByDate, today])
 
   useEffect(() => {
-    if (currentLog?.date === today && !hydratedRef.current) {
-      setContent(currentLog.content)
-      hydratedRef.current = true
-    }
-  }, [currentLog, today])
+    void loadToday()
+  }, [loadToday])
 
   const { status, saveNow } = useAutoSave({
     value: content,
     savedValue: currentLog?.content ?? '',
-    enabled: hydratedRef.current && !loading,
+    enabled: ready && !loading && !loadFailed,
     canSave: value => value.trim().length > 0,
     onSave: async nextContent => {
       await saveLog({ date: today, content: nextContent }, true)
@@ -51,13 +58,21 @@ const TodayPage = () => {
   })
 
   const handleSave = useCallback(async () => {
+    if (!ready || loading || loadFailed) {
+      toast.error(PAGE_TEXT.todayLoadRequired)
+      return
+    }
+    if (!content.trim()) {
+      toast.error(PAGE_TEXT.todayEmptyContent)
+      return
+    }
     try {
       const saved = await saveNow(true)
       if (saved) toast.success(PAGE_TEXT.todaySaveSuccess)
     } catch {
       toast.error(PAGE_TEXT.saveFail)
     }
-  }, [saveNow])
+  }, [content, loadFailed, loading, ready, saveNow])
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -83,23 +98,39 @@ const TodayPage = () => {
           eyebrow="工作记录"
           title="今天"
           description={`${formatDateLabel(today)} · 把今天值得留下的事情写下来`}
-          meta={<SaveStatus status={status} onRetry={() => { void saveNow() }} />}
+          meta={ready ? <SaveStatus status={status} onRetry={() => { void saveNow() }} /> : undefined}
         />
 
-        {loading ? (
+        {loading && !loadFailed ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-40" />
             <Skeleton className="h-[520px] w-full" />
           </div>
+        ) : loadFailed ? (
+          <div className="flex flex-col items-start gap-3 rounded-2xl border border-gray-200 bg-white p-6
+            dark:border-gray-800 dark:bg-gray-950">
+            <p className="text-sm text-gray-600 dark:text-gray-300">{PAGE_TEXT.todayLoadRequired}</p>
+            <Button
+              variant="outline"
+              className="hover:scale-105 transition-all duration-200 dark:border-gray-700"
+              onClick={() => { void loadToday() }}
+            >
+              {PAGE_TEXT.retryLoad}
+            </Button>
+          </div>
+        ) : !ready ? (
+          <Skeleton className="h-[520px] w-full" />
         ) : (
-          <section className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-800 dark:bg-gray-950 sm:px-7">
+          <section className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm
+            dark:border-gray-800 dark:bg-gray-950 sm:px-7">
             <Editor value={content} onChange={setContent} quiet minHeight="min(62vh, 680px)" />
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4 text-xs text-gray-400 dark:border-gray-900 dark:text-gray-600">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4
+              text-xs text-gray-400 dark:border-gray-900 dark:text-gray-600">
               <div className="flex items-center gap-3">
                 <span>{wordCount} 字</span>
                 {lastUpdatedHint && content.trim() ? <span>最近更新 {lastUpdatedHint}</span> : null}
-                <span className="hidden sm:inline">⌘/Ctrl + S 立即保存</span>
+                <span className="hidden sm:inline">{PAGE_TEXT.todaySaveShortcut}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Button
@@ -116,7 +147,8 @@ const TodayPage = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 gap-1.5 text-xs text-gray-400 hover:text-red-600 dark:text-gray-600 dark:hover:text-red-400"
+                    className="h-8 gap-1.5 text-xs text-gray-400 hover:text-red-600 dark:text-gray-600
+                      dark:hover:text-red-400"
                     onClick={handleDelete}
                   >
                     <Trash2 className="h-3.5 w-3.5" />

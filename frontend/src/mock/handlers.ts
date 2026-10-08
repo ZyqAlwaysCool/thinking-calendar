@@ -1,6 +1,7 @@
 import { rest } from 'msw'
 import { format, parseISO } from 'date-fns'
 import raw from './data.json'
+import { PAGE_TEXT } from '@/lib/constants'
 import {
   type ApiResponse,
   type AttendancePushHistoryResp,
@@ -24,6 +25,58 @@ let logs: RawLog[] = rawLogs.map((item) => ({
   ...item,
   version: item.version ?? item.count ?? 1
 }))
+
+let logsLoadPromise: Promise<void> | null = null
+
+const openLogsDb = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  const request = indexedDB.open('thinking-calendar-mock', 1)
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains('records')) request.result.createObjectStore('records')
+  }
+  request.onsuccess = () => resolve(request.result)
+  request.onerror = () => reject(request.error)
+})
+
+const loadLogs = async () => {
+  if (typeof indexedDB === 'undefined') return
+  if (!logsLoadPromise) {
+    logsLoadPromise = (async () => {
+      const db = await openLogsDb()
+      try {
+        const stored = await new Promise<RawLog[] | undefined>((resolve, reject) => {
+          const request = db.transaction('records', 'readonly').objectStore('records').get('logs')
+          request.onsuccess = () => resolve(request.result as RawLog[] | undefined)
+          request.onerror = () => reject(request.error)
+        })
+        if (stored) logs = stored
+      } finally {
+        db.close()
+      }
+    })().catch(error => {
+      logsLoadPromise = null
+      throw error
+    })
+  }
+  await logsLoadPromise
+}
+
+const persistLogs = async (nextLogs: RawLog[]) => {
+  if (typeof indexedDB !== 'undefined') {
+    const db = await openLogsDb()
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction('records', 'readwrite')
+        transaction.objectStore('records').put(nextLogs, 'logs')
+        transaction.oncomplete = () => resolve()
+        transaction.onerror = () => reject(transaction.error)
+        transaction.onabort = () => reject(transaction.error)
+      })
+    } finally {
+      db.close()
+    }
+  }
+  logs = nextLogs
+}
 
 let reports: RawReport[] = rawReports.map((item) => ({
   ...item,
@@ -224,7 +277,12 @@ export const handlers = [
   }),
 
   // ========== 工作记录模块 ==========
-  rest.get('/api/records', (req, res, ctx) => {
+  rest.get('/api/records', async (req, res, ctx) => {
+    try {
+      await loadLogs()
+    } catch {
+      return res(ctx.status(500), ctx.json({ code: 500, msg: PAGE_TEXT.loadFail, data: null }))
+    }
     const date = req.url.searchParams.get('date')
     if (date) {
       const found = logs.find(item => item.date === date)
@@ -243,7 +301,12 @@ export const handlers = [
     return res(ctx.status(200), ctx.json(resp))
   }),
 
-  rest.get('/api/records/range', (req, res, ctx) => {
+  rest.get('/api/records/range', async (req, res, ctx) => {
+    try {
+      await loadLogs()
+    } catch {
+      return res(ctx.status(500), ctx.json({ code: 500, msg: PAGE_TEXT.loadFail, data: null }))
+    }
     const start = req.url.searchParams.get('start') || ''
     const end = req.url.searchParams.get('end') || ''
     const filtered = logs.filter(item => item.date >= start && item.date <= end)
@@ -256,42 +319,39 @@ export const handlers = [
   }),
 
   rest.post('/api/records', async (req, res, ctx) => {
-    const body = await req.json()
-    const { date, content } = body as { date: string; content: string }
-    const existing = logs.find(item => item.date === date)
-    const now = new Date().toISOString()
-    if (existing) {
-      existing.content = content
-      existing.updatedAt = now
-      existing.version = (existing.version ?? 1) + 1
+    try {
+      await loadLogs()
+      const body = await req.json()
+      const { date, content } = body as { date: string; content: string }
+      const existing = logs.find(item => item.date === date)
+      const now = new Date().toISOString()
+      const saved: RawLog = existing
+        ? { ...existing, content, updatedAt: now, version: (existing.version ?? 1) + 1 }
+        : { id: `rec_${Date.now()}`, date, content, updatedAt: now, version: 1 }
+      await persistLogs(existing
+        ? logs.map(item => item.date === date ? saved : item)
+        : [...logs, saved])
       const resp: ApiResponse<ReturnType<typeof toRecordResp>> = {
         code: 0,
         msg: 'ok',
-        data: toRecordResp(existing)
+        data: toRecordResp(saved)
       }
       return res(ctx.status(200), ctx.json(resp))
+    } catch {
+      return res(ctx.status(500), ctx.json({ code: 500, msg: PAGE_TEXT.saveFail, data: null }))
     }
-    const created: RawLog = {
-      id: `rec_${Date.now()}`,
-      date,
-      content,
-      updatedAt: now,
-      version: 1
-    }
-    logs = [...logs, created]
-    const resp: ApiResponse<ReturnType<typeof toRecordResp>> = {
-      code: 0,
-      msg: 'ok',
-      data: toRecordResp(created)
-    }
-    return res(ctx.status(200), ctx.json(resp))
   }),
 
-  rest.delete('/api/records/:record_id', (req, res, ctx) => {
-    const { record_id } = req.params
-    logs = logs.filter(item => item.id !== record_id)
-    const resp: ApiResponse<null> = { code: 0, msg: 'ok', data: null }
-    return res(ctx.status(200), ctx.json(resp))
+  rest.delete('/api/records/:record_id', async (req, res, ctx) => {
+    try {
+      await loadLogs()
+      const { record_id } = req.params
+      await persistLogs(logs.filter(item => item.id !== record_id))
+      const resp: ApiResponse<null> = { code: 0, msg: 'ok', data: null }
+      return res(ctx.status(200), ctx.json(resp))
+    } catch {
+      return res(ctx.status(500), ctx.json({ code: 500, msg: PAGE_TEXT.saveFail, data: null }))
+    }
   }),
 
   // ========== 报告模块 ==========
@@ -419,7 +479,12 @@ export const handlers = [
   }),
 
   // ========== 看板模块 ==========
-  rest.get('/api/dashboard/month', (req, res, ctx) => {
+  rest.get('/api/dashboard/month', async (req, res, ctx) => {
+    try {
+      await loadLogs()
+    } catch {
+      return res(ctx.status(500), ctx.json({ code: 500, msg: PAGE_TEXT.loadFail, data: null }))
+    }
     const month = req.url.searchParams.get('month') || format(new Date(), 'yyyy-MM')
     const [yearStr, monthStr] = month.split('-')
     const year = parseInt(yearStr, 10)
