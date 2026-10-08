@@ -8,7 +8,7 @@ export const Calendar = ({ className, classNames, showOutsideDays = true, ...pro
   <DayPicker
     showOutsideDays={showOutsideDays}
     locale={props.locale ?? zhCN}
-    className={cn('rounded-xl border border-gray-200 bg-gray-100 p-4 dark:border-gray-800 dark:bg-gray-900', className)}
+    className={cn('rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950', className)}
     classNames={{
       months: 'flex flex-col space-y-4',
       month: 'space-y-4',
@@ -16,15 +16,15 @@ export const Calendar = ({ className, classNames, showOutsideDays = true, ...pro
       caption_label: 'text-base font-semibold',
       nav: 'flex items-center space-x-2',
       nav_button:
-        'inline-flex items-center justify-center h-8 w-8 rounded-lg text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-900 hover:scale-105 transition-all duration-200',
+        'inline-flex items-center justify-center h-8 w-8 rounded-lg text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors duration-150',
       head_row: 'grid grid-cols-7 text-center text-xs text-gray-300',
       head_cell: 'py-1',
       row: 'grid grid-cols-7 text-center',
       cell: 'relative p-1 text-sm',
       day:
-        'flex items-center justify-center h-10 w-10 rounded-lg text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:scale-105 transition-all duration-200',
+        'flex items-center justify-center h-10 w-10 rounded-lg text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors duration-150',
       day_selected:
-        'flex items-center justify-center h-10 w-10 rounded-lg text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:scale-105 transition-all duration-200',
+        'flex items-center justify-center h-10 w-10 rounded-lg bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 transition-colors duration-150',
       day_today: 'ring-2 ring-gray-900 dark:ring-gray-100',
       day_outside: 'text-gray-300 dark:text-gray-700',
       day_disabled: 'text-gray-300 opacity-60',

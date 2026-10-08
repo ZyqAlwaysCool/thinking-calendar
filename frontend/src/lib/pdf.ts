@@ -63,36 +63,43 @@ const addCanvasToPdf = (doc: jsPDF, canvas: HTMLCanvasElement, isFirstPage: bool
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 10
-
-  const imgWidth = pageWidth - margin * 2
-  const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-  let remainingHeight = imgHeight
+  const imageWidth = pageWidth - margin * 2
+  const availableHeight = pageHeight - margin * 2
+  const pixelsPerPage = Math.max(1, Math.floor((availableHeight * canvas.width) / imageWidth))
   let sourceY = 0
 
-  while (remainingHeight > 0) {
-    if (!isFirstPage) {
-      doc.addPage()
-    }
+  while (sourceY < canvas.height) {
+    if (!isFirstPage) doc.addPage()
     isFirstPage = false
 
-    const availableHeight = pageHeight - margin * 2
-    const sliceHeight = Math.min(remainingHeight, availableHeight)
-    const sourceHeight = (sliceHeight / imgHeight) * canvas.height
-
+    const sourceHeight = Math.min(pixelsPerPage, canvas.height - sourceY)
+    const pageCanvas = document.createElement('canvas')
+    pageCanvas.width = canvas.width
+    pageCanvas.height = sourceHeight
+    const context = pageCanvas.getContext('2d')
+    if (!context) throw new Error('无法创建 PDF 画布')
+    context.drawImage(
+      canvas,
+      0,
+      sourceY,
+      canvas.width,
+      sourceHeight,
+      0,
+      0,
+      canvas.width,
+      sourceHeight
+    )
     doc.addImage(
-      canvas.toDataURL('image/png'),
+      pageCanvas.toDataURL('image/png'),
       'PNG',
       margin,
       margin,
-      imgWidth,
-      sliceHeight,
+      imageWidth,
+      (sourceHeight * imageWidth) / canvas.width,
       undefined,
       'FAST'
     )
-
     sourceY += sourceHeight
-    remainingHeight -= sliceHeight
   }
 }
 

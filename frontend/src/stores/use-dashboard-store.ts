@@ -17,7 +17,7 @@ type MonthResp = {
 type DashboardState = {
   data: MonthDashboard | null
   loading: boolean
-  fetchMonth: (month: string) => Promise<void>
+  fetchMonth: (month: string, silent?: boolean) => Promise<void>
 }
 
 const mapResp = (resp: MonthResp): MonthDashboard => ({
@@ -33,8 +33,8 @@ const mapResp = (resp: MonthResp): MonthDashboard => ({
 export const useDashboardStore = create<DashboardState>((set) => ({
   data: null,
   loading: false,
-  fetchMonth: async (month: string) => {
-    set({ loading: true })
+  fetchMonth: async (month: string, silent = false) => {
+    if (!silent) set({ loading: true })
     try {
       const res = await api.get<ApiResponse<MonthResp>>('/dashboard/month', { params: { month } })
       set({ data: mapResp(res.data.data), loading: false })

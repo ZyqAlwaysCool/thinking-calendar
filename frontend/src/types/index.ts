@@ -168,3 +168,13 @@ export type UserSettings = {
   autoGenerateWeekly: boolean
   weeklyReportTime: string
 }
+
+export type AutoSaveStatus = 'saved' | 'pending' | 'saving' | 'error' | 'empty'
+
+export type ReportFilter = 'all' | 'pending' | 'confirmed' | 'generating' | 'failed'
+
+export type ConfirmDeleteProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => Promise<void>
+}

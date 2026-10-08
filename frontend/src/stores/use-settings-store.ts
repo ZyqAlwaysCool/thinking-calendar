@@ -17,7 +17,7 @@ type SettingsState = {
   loading: boolean
   saving: boolean
   fetchSettings: () => Promise<void>
-  updateSettings: (payload: { reportTemplateWeek: string; reportTemplateMonth: string }) => Promise<void>
+  updateSettings: (payload: { reportTemplateWeek: string; reportTemplateMonth: string }, silent?: boolean) => Promise<void>
 }
 
 const mapSettings = (data: UserSettingsResp): UserSettings => ({
@@ -44,7 +44,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       throw error
     }
   },
-  updateSettings: async (payload) => {
+  updateSettings: async (payload, silent = false) => {
     const current = get().settings
     if (!current) {
       toast.error(PAGE_TEXT.settingsLoadFail)
@@ -68,7 +68,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         },
         saving: false
       })
-      toast.success(PAGE_TEXT.saveSuccess)
+      if (!silent) toast.success(PAGE_TEXT.saveSuccess)
     } catch (error) {
       set({ saving: false })
       toast.error(extractErrorMessage(error, PAGE_TEXT.settingsSaveFail))
