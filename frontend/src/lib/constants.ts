@@ -90,6 +90,7 @@ export const PAGE_TEXT = {
   retryLoad: '重新加载',
   reportSave: '保存报告',
   reportSaveSuccess: '报告已保存',
+  reportUnsavedBlocked: '当前报告的修改尚未保存，请先保存后再继续',
   saveFail: '保存失败',
   generateSuccess: '生成成功',
   generateFail: '生成失败',

@@ -231,6 +231,15 @@ const ReportsPage = () => {
     }
   })
 
+  // 只有“编辑器里打开的是 ready 报告、且存在未保存改动”时才需要先落盘草稿；
+  // 没有选中报告、报告非 ready（生成中/失败）时不再拦截后续操作，避免按钮静默无反应
+  const flushSelectedDraft = async () => {
+    if (!selectedReport || selectedReport.status !== 'ready') return true
+    if (await reportAutoSave.saveNow()) return true
+    toast.error(PAGE_TEXT.reportUnsavedBlocked)
+    return false
+  }
+
   const sortedReports = useMemo(
     () => [...reports].sort((a, b) => (a.endDate < b.endDate ? 1 : -1)),
     [reports]
@@ -279,7 +288,7 @@ const ReportsPage = () => {
   )
 
   const onSelectReport = async (report: Report) => {
-    if (selectedReport?.id !== report.id && !(await reportAutoSave.saveNow())) return
+    if (selectedReport?.id !== report.id && !(await flushSelectedDraft())) return
     setSelectedReport(report)
     setEditorContent(report.content)
     setListPeriod(report.period)
@@ -302,7 +311,7 @@ const ReportsPage = () => {
   }
 
   const performGenerate = async () => {
-    if (!(await reportAutoSave.saveNow())) return
+    if (!(await flushSelectedDraft())) return
     try {
       const created = await generateReport(form)
       setSelectedReport(created)
@@ -326,13 +335,14 @@ const ReportsPage = () => {
     try {
       const saved = await reportAutoSave.saveNow(true)
       if (saved) toast.success(PAGE_TEXT.reportSaveSuccess)
+      else toast.error(PAGE_TEXT.saveFail)
     } catch {
       toast.error(PAGE_TEXT.saveFail)
     }
   }
 
   const handleConfirm = async () => {
-    if (!selectedReport || !(await reportAutoSave.saveNow())) return
+    if (!selectedReport || !(await flushSelectedDraft())) return
     try {
       const updated = await confirmReport({ id: selectedReport.id })
       setSelectedReport(updated)
@@ -366,7 +376,7 @@ const ReportsPage = () => {
   }
 
   const handleExportPdf = async () => {
-    if (!selectedReport || !(await reportAutoSave.saveNow())) return
+    if (!selectedReport || !(await flushSelectedDraft())) return
     try {
       await downloadReportPdf(
         selectedReport.title,
@@ -380,7 +390,7 @@ const ReportsPage = () => {
   }
 
   const handleExportMarkdown = async () => {
-    if (!selectedReport || !(await reportAutoSave.saveNow())) return
+    if (!selectedReport || !(await flushSelectedDraft())) return
     downloadMarkdown(`${selectedReport.title}.md`, editorContent)
     toast.success(PAGE_TEXT.exportSuccess)
   }
