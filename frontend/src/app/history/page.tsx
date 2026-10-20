@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { format, parseISO, isSameMonth, isAfter } from 'date-fns'
 import { type DayContentProps } from 'react-day-picker'
 import ReactMarkdown from 'react-markdown'
@@ -30,7 +30,25 @@ const HistoryPage = () => {
   const [draft, setDraft] = useState('')
   const [query, setQuery] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const hydratedDateRef = useRef('')
+  const [ready, setReady] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const loadRequestRef = useRef(0)
+
+  const loadEditorRecord = useCallback(async (date: string) => {
+    const request = ++loadRequestRef.current
+    setReady(false)
+    setLoadFailed(false)
+    try {
+      await fetchLogByDate(date)
+      if (request !== loadRequestRef.current) return
+      const loaded = useLogStore.getState().currentLog
+      if (loaded?.date !== date) return
+      setDraft(loaded.content)
+      setReady(true)
+    } catch {
+      if (request === loadRequestRef.current) setLoadFailed(true)
+    }
+  }, [fetchLogByDate])
 
   useEffect(() => {
     void fetchLogs().catch(() => {})
@@ -41,33 +59,26 @@ const HistoryPage = () => {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return
     const parsed = parseISO(date)
     if (isAfter(parsed, new Date())) return
-    hydratedDateRef.current = ''
     setDraft('')
     setSelectedDate(parsed)
     setDisplayMonth(parsed)
     setOpen(true)
-    void fetchLogByDate(date).catch(() => {})
-  }, [fetchLogByDate])
+    void loadEditorRecord(date)
+  }, [loadEditorRecord])
 
   const recordedDates = useMemo(() => logs.map(item => parseISO(item.date)), [logs])
   const logMap = useMemo(() => new Map(logs.map(item => [item.date, item])), [logs])
 
   const selectedDateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''
-  useEffect(() => {
-    if (open && currentLog?.date === selectedDateKey && hydratedDateRef.current !== selectedDateKey) {
-      setDraft(currentLog.content)
-      hydratedDateRef.current = selectedDateKey
-    }
-  }, [open, currentLog, selectedDateKey])
+  const selectedLog = currentLog?.date === selectedDateKey ? currentLog : null
 
   const { status, saveNow } = useAutoSave({
     value: draft,
-    savedValue: currentLog?.date === selectedDateKey ? currentLog.content : '',
-    enabled: open && !!selectedDateKey && hydratedDateRef.current === selectedDateKey,
+    savedValue: selectedLog?.content ?? '',
+    enabled: open && ready && !!selectedDateKey,
     canSave: value => value.trim().length > 0,
     onSave: async nextContent => {
       await saveLog({ date: selectedDateKey, content: nextContent }, true)
-      await fetchLogs(true)
     }
   })
 
@@ -77,14 +88,11 @@ const HistoryPage = () => {
       toast.error(PAGE_TEXT.futureDateForbidden)
       return
     }
-    hydratedDateRef.current = ''
     setDraft('')
     setSelectedDate(parsed)
     setDisplayMonth(parsed)
     setOpen(true)
-    try {
-      await fetchLogByDate(date)
-    } catch {}
+    await loadEditorRecord(date)
   }
 
   const handleSelect = async (date?: Date) => {
@@ -109,12 +117,16 @@ const HistoryPage = () => {
       return
     }
     void (async () => {
-      const saved = await saveNow()
-      if (!saved && draft.trim()) return
+      if (ready) {
+        const saved = await saveNow()
+        if (!saved && draft.trim()) return
+      }
+      loadRequestRef.current += 1
       setOpen(false)
       setSelectedDate(undefined)
       setDraft('')
-      hydratedDateRef.current = ''
+      setReady(false)
+      setLoadFailed(false)
     })()
   }
 
@@ -236,11 +248,32 @@ const HistoryPage = () => {
                 </DialogTitle>
               </DialogHeader>
               <div className="mt-2">
-                <SaveStatus status={status} onRetry={() => { void saveNow() }} />
+                {ready && (selectedLog?.id || draft.trim()) ? (
+                  <SaveStatus status={status} onRetry={() => { void saveNow() }} />
+                ) : (
+                  <span className="text-xs text-gray-500 dark:text-gray-400" role="status">
+                    {loadFailed ? PAGE_TEXT.loadFail : ready ? PAGE_TEXT.historyEmptyLog : PAGE_TEXT.loading}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <Editor value={draft} onChange={setDraft} quiet minHeight="calc(100vh - 210px)" />
+              {loadFailed ? (
+                <div className="flex flex-col items-start gap-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{PAGE_TEXT.historyLoadRequired}</p>
+                  <Button
+                    variant="outline"
+                    className="hover:scale-105 transition-all duration-200 dark:border-gray-700"
+                    onClick={() => { void loadEditorRecord(selectedDateKey) }}
+                  >
+                    {PAGE_TEXT.retryLoad}
+                  </Button>
+                </div>
+              ) : ready ? (
+                <Editor value={draft} onChange={setDraft} quiet minHeight="calc(100vh - 210px)" />
+              ) : (
+                <Skeleton className="h-[60vh] w-full" />
+              )}
             </div>
             <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-800">
               <Button
@@ -248,9 +281,9 @@ const HistoryPage = () => {
                 size="sm"
                 className="text-gray-400 hover:text-red-600 dark:text-gray-600 dark:hover:text-red-400"
                 onClick={() => setDeleteOpen(true)}
-                disabled={!currentLog?.id}
+                disabled={!ready || !selectedLog?.id || saving}
               >
-                删除记录
+                {PAGE_TEXT.deleteRecord}
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleDialogChange(false)} disabled={saving}>
                 {DIALOG_TEXT.close}
@@ -269,7 +302,10 @@ const HistoryPage = () => {
           await fetchLogs(true)
           setOpen(false)
           setDraft('')
-          hydratedDateRef.current = ''
+          setSelectedDate(undefined)
+          setReady(false)
+          setLoadFailed(false)
+          loadRequestRef.current += 1
         }}
       />
     </PageShell>

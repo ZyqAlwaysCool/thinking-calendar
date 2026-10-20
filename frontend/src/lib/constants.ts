@@ -88,6 +88,8 @@ export const PAGE_TEXT = {
   todayEmptyContent: '请先填写内容再保存',
   todaySaveShortcut: '⌘/Ctrl + S 立即保存',
   retryLoad: '重新加载',
+  historyEmptyLog: '暂无记录，输入后自动保存',
+  historyLoadRequired: '记录加载失败，请重新加载后编辑，或关闭侧栏',
   reportSave: '保存报告',
   reportSaveSuccess: '报告已保存',
   reportUnsavedBlocked: '当前报告的修改尚未保存，请先保存后再继续',
