@@ -62,6 +62,8 @@
   - Query：`date?:string`
   - 响应 data：
     - 单日：`Record | null`
+      当天没有记录或记录已删除时，响应为 `{"code":0,"msg":"ok","data":null}`，
+      前端据此打开所选日期的空白编辑器；不得把 `null` 转换为 `{}`。
     - 全部：`Record[]`
 - `GET /api/records/range`
   - 说明：按时间范围批量查询，支持看板与报告生成。
@@ -69,10 +71,12 @@
   - 响应 data：`Record[]`
 - `POST /api/records`
   - 说明：创建或更新指定日期的工作记录（幂等 upsert，同一 user_id+date 多次调用视为更新）。
+    当天记录已软删除时复用原记录并恢复，不重复插入占用相同唯一键的新行。
   - 请求体：`{date:string, content:string, meta?:object}`
   - 响应 data：`Record`
-- `DELETE /api/records/:record_id`（预留）
-  - 说明：软删除，当前前端未用。
+- `DELETE /api/records/:record_id`
+  - 说明：历史页使用此接口软删除记录；删除后查询当天返回 `null`，仍可重新补写当天，
+    不影响其他日期的记录。
   - 响应 data：`null`
 - 工作记录字段定义：`{record_id:string, date:string, content:string, updatedAt:string, count:number}`。`user_id` 由后端依据登录态确定，无需前端传入；可同时返回兼容字段 `id=record_id` 便于前端现有类型过渡。
 
@@ -233,3 +237,5 @@ type ReportJob struct {
 - 保持字段对齐：`Record{ id,date,content,updatedAt,count }`，`Report{ id,period,startDate,endDate,title,content,confirmed,createdAt }`。后端新增字段（template/status等）可返回但前端可忽略。
 - 报告生成：如果生成耗时，先返回占位 content 并附带 status=processing，前端可轮询 `/api/reports/:id`。同步生成时直接返回最终内容即可。
 - 错误提示使用中文 msg，前端 toast 直接展示；code=0 成功，非 0 视为错误。
+- 成功响应没有业务数据时保留 `data: null`，不转换为空对象。注册、设置更新、报告编辑与确认、
+  记录删除的调用方只判断成功状态，不读取空数据；错误响应结构保持不变。

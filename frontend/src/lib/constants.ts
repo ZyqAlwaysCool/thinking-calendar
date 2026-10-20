@@ -90,6 +90,7 @@ export const PAGE_TEXT = {
   retryLoad: '重新加载',
   historyEmptyLog: '暂无记录，输入后自动保存',
   historyLoadRequired: '记录加载失败，请重新加载后编辑，或关闭侧栏',
+  recordDateMismatch: '记录日期与查询日期不一致，请检查接口返回数据后重新加载',
   reportSave: '保存报告',
   reportSaveSuccess: '报告已保存',
   reportUnsavedBlocked: '当前报告的修改尚未保存，请先保存后再继续',

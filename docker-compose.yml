@@ -21,7 +21,7 @@ services:
       - ./deploy_docker/mysql:/var/lib/mysql
 
   migrate:
-    image: thinking-calendar-backend:latest
+    image: thinking-calendar-backend:${BACKEND_TAG:?请在 .env.docker 中设置 BACKEND_TAG}
     build:
       context: ./backend
       dockerfile: deploy/build/Dockerfile
@@ -47,7 +47,7 @@ services:
     restart: "no"
 
   task:
-    image: thinking-calendar-backend:latest
+    image: thinking-calendar-backend:${BACKEND_TAG:?请在 .env.docker 中设置 BACKEND_TAG}
     build:
       context: ./backend
       dockerfile: deploy/build/Dockerfile
@@ -72,7 +72,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: thinking-calendar-backend:latest
+    image: thinking-calendar-backend:${BACKEND_TAG:?请在 .env.docker 中设置 BACKEND_TAG}
     build:
       context: ./backend
       dockerfile: deploy/build/Dockerfile
@@ -95,7 +95,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: thinking-calendar-frontend:latest
+    image: thinking-calendar-frontend:${FRONTEND_TAG:?请在 .env.docker 中设置 FRONTEND_TAG}
     build:
       context: ./frontend
       dockerfile: Dockerfile

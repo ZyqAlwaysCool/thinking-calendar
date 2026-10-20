@@ -14,6 +14,24 @@ export type Log = {
   version: number
 }
 
+export type RecordResp = {
+  record_id: string
+  date: string
+  content: string
+  updatedAt: string
+  version: number
+}
+
+export type LogState = {
+  logs: Log[]
+  currentLog: Log | null
+  loading: boolean
+  saving: boolean
+  fetchLogs: (silent?: boolean) => Promise<void>
+  fetchLogByDate: (date: string) => Promise<Log>
+  saveLog: (payload: SaveLogPayload, silent?: boolean) => Promise<void>
+}
+
 export type ReportPeriod = 'week' | 'month' | 'year'
 
 export type Report = {

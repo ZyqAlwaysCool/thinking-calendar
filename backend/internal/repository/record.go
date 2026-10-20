@@ -66,7 +66,8 @@ func (r *recordRepository) GetByUserID(ctx context.Context, userId string, date 
 	if date == "" {
 		query = r.DB(ctx).Where("user_id = ? AND is_deleted = ?", userId, false)
 	} else {
-		query = r.DB(ctx).Where("user_id = ? AND date = ? AND is_deleted = ?", userId, date, false)
+		// 单日查询保留软删除行，保存时复用同一用户和日期的唯一记录
+		query = r.DB(ctx).Where("user_id = ? AND date = ?", userId, date)
 	}
 
 	if err := query.Find(&records).Error; err != nil {

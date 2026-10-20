@@ -16,6 +16,7 @@ import { SaveStatus } from '@/components/save-status'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { useAutoSave } from '@/lib/use-auto-save'
 import { DIALOG_TEXT, PAGE_TEXT } from '@/lib/constants'
+import { extractErrorMessage } from '@/lib/api'
 import { formatDateLabel, formatShortDate, formatTime } from '@/lib/utils'
 import { useLogStore } from '@/stores/use-log-store'
 import { toast } from 'react-hot-toast'
@@ -31,22 +32,22 @@ const HistoryPage = () => {
   const [query, setQuery] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [ready, setReady] = useState(false)
-  const [loadFailed, setLoadFailed] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const loadRequestRef = useRef(0)
 
   const loadEditorRecord = useCallback(async (date: string) => {
     const request = ++loadRequestRef.current
     setReady(false)
-    setLoadFailed(false)
+    setLoadError('')
     try {
-      await fetchLogByDate(date)
+      const loaded = await fetchLogByDate(date)
       if (request !== loadRequestRef.current) return
-      const loaded = useLogStore.getState().currentLog
-      if (loaded?.date !== date) return
       setDraft(loaded.content)
       setReady(true)
-    } catch {
-      if (request === loadRequestRef.current) setLoadFailed(true)
+    } catch (error) {
+      if (request === loadRequestRef.current) {
+        setLoadError(extractErrorMessage(error, PAGE_TEXT.historyLoadRequired))
+      }
     }
   }, [fetchLogByDate])
 
@@ -126,7 +127,7 @@ const HistoryPage = () => {
       setSelectedDate(undefined)
       setDraft('')
       setReady(false)
-      setLoadFailed(false)
+      setLoadError('')
     })()
   }
 
@@ -252,15 +253,15 @@ const HistoryPage = () => {
                   <SaveStatus status={status} onRetry={() => { void saveNow() }} />
                 ) : (
                   <span className="text-xs text-gray-500 dark:text-gray-400" role="status">
-                    {loadFailed ? PAGE_TEXT.loadFail : ready ? PAGE_TEXT.historyEmptyLog : PAGE_TEXT.loading}
+                    {loadError ? PAGE_TEXT.loadFail : ready ? PAGE_TEXT.historyEmptyLog : PAGE_TEXT.loading}
                   </span>
                 )}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              {loadFailed ? (
+              {loadError ? (
                 <div className="flex flex-col items-start gap-3">
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{PAGE_TEXT.historyLoadRequired}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300" role="alert">{loadError}</p>
                   <Button
                     variant="outline"
                     className="hover:scale-105 transition-all duration-200 dark:border-gray-700"
@@ -304,7 +305,7 @@ const HistoryPage = () => {
           setDraft('')
           setSelectedDate(undefined)
           setReady(false)
-          setLoadFailed(false)
+          setLoadError('')
           loadRequestRef.current += 1
         }}
       />

@@ -2,16 +2,8 @@ import { create } from 'zustand'
 import { toast } from 'react-hot-toast'
 import { api, extractErrorMessage } from '@/lib/api'
 import { PAGE_TEXT } from '@/lib/constants'
-import { type ApiResponse, type Log, type SaveLogPayload } from '@/types'
+import { type ApiResponse, type Log, type LogState, type RecordResp, type SaveLogPayload } from '@/types'
 import { normalizeMarkdown } from '@/lib/markdown'
-
-type RecordResp = {
-  record_id: string
-  date: string
-  content: string
-  updatedAt: string
-  version: number
-}
 
 const mapRecord = (item: RecordResp): Log => ({
   id: item.record_id,
@@ -20,16 +12,6 @@ const mapRecord = (item: RecordResp): Log => ({
   updatedAt: item.updatedAt || new Date().toISOString(),
   version: item.version ?? 0
 })
-
-type LogState = {
-  logs: Log[]
-  currentLog: Log | null
-  loading: boolean
-  saving: boolean
-  fetchLogs: (silent?: boolean) => Promise<void>
-  fetchLogByDate: (date: string) => Promise<void>
-  saveLog: (payload: SaveLogPayload, silent?: boolean) => Promise<void>
-}
 
 export const useLogStore = create<LogState>((set, get) => ({
   logs: [],
@@ -51,16 +33,23 @@ export const useLogStore = create<LogState>((set, get) => ({
   fetchLogByDate: async (date: string) => {
     set({ loading: true })
     try {
-      const res = await api.get<ApiResponse<RecordResp | null>>('/records', { params: { date } })
-      const found = res.data.data ? mapRecord(res.data.data) : null
-      const fallback: Log = {
+      const res = await api.get<ApiResponse<RecordResp | null>>('/records', {
+        params: { date },
+        timeout: 15000
+      })
+      const record = res.data.data
+      if (record !== null && record?.date !== date) {
+        throw new Error(PAGE_TEXT.recordDateMismatch)
+      }
+      const loaded: Log = record === null ? {
         id: '',
         date,
         content: '',
         updatedAt: new Date().toISOString(),
         version: 0
-      }
-      set({ currentLog: found ?? fallback, loading: false })
+      } : mapRecord(record)
+      set({ currentLog: loaded, loading: false })
+      return loaded
     } catch (error) {
       set({ loading: false })
       toast.error(extractErrorMessage(error, PAGE_TEXT.loadFail))

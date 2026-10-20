@@ -13,9 +13,6 @@ type Response struct {
 }
 
 func HandleSuccess(ctx *gin.Context, data interface{}) {
-	if data == nil {
-		data = map[string]interface{}{}
-	}
 	resp := Response{Code: errorCodeMap[ErrSuccess], Msg: ErrSuccess.Error(), Data: data}
 	if _, ok := errorCodeMap[ErrSuccess]; !ok {
 		resp = Response{Code: 0, Msg: "", Data: data}
